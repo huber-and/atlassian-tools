@@ -1,0 +1,78 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.github.huber-and.atlassian</groupId>
+	<artifactId>atlassian-tools</artifactId>
+	<version>${revision}${changelist}</version>
+	<packaging>pom</packaging>
+	<description>Atlassian Tools</description>
+	<properties>
+		<revision>0.1</revision>
+		<changelist>-SNAPSHOT</changelist>
+		<maven.compiler.source>21</maven.compiler.source>
+		<maven.compiler.target>21</maven.compiler.target>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<maven-plugin.version>3.9.0</maven-plugin.version>
+		<maven-plugin-tools.version>3.15.2</maven-plugin-tools.version>
+		<flatten.plugin.version>1.7.1</flatten.plugin.version>
+	</properties>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>flatten-maven-plugin</artifactId>
+				<version>${flatten.plugin.version}</version>
+				<inherited>true</inherited>
+				<configuration>
+					<updatePomFile>true</updatePomFile>
+					<flattenMode>resolveCiFriendliesOnly</flattenMode>
+				</configuration>
+				<executions>
+					<execution>
+						<id>flatten</id>
+						<phase>process-resources</phase>
+						<goals>
+							<goal>flatten</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>flatten.clean</id>
+						<phase>clean</phase>
+						<goals>
+							<goal>clean</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-plugin-plugin</artifactId>
+					<version>${maven-plugin-tools.version}</version>
+					<executions>
+						<execution>
+							<id>help-mojo</id>
+							<goals>
+								<!-- good practice is to generate help mojo for
+								plugin -->
+								<goal>helpmojo</goal>
+							</goals>
+						</execution>
+					</executions>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+	<modules>
+		<module>wiki-client</module>
+		<module>wiki-publisher</module>
+		<module>maven-plugin</module>
+		<module>arc42-sample</module>
+	</modules>
+</project>
+
