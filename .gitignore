@@ -10,3 +10,5 @@
 **/.settings/
 **/target/
 **/.flattened-pom.xml
+**/node/
+**/node_modules/
