@@ -1,0 +1,29 @@
+site:
+  title: arc42 Template
+  start_page: index.adoc
+content:
+  sources:
+    - url: .
+      branches: main
+      version: main
+      start_path: src/main/docsdocs
+asciidoc:
+  attributes:
+    sectanchors: true
+output: 
+  dir: ./target/docs
+  destinations: 
+  - provider: archive 
+    path: ./target/docs.zip
+runtime:
+  fetch: true
+  cache_dir: ./target/cache
+  log:
+    format: pretty
+    level: all
+antora:
+  extensions:
+    - require: '@djencks/asciidoctor-jsonpath'
+    - require: '@djencks/asciidoctor-antora-indexer'
+    - require: '@antora/lunr-extension'
+      index_latest_only: true

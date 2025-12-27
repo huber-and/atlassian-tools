@@ -1,0 +1,42 @@
+site:
+  title: arc42 Template
+  start_page: index.adoc
+  url: https://the-hubers.atlassian.net/wiki/spaces/arc42sample
+content:
+  edit_url: ~
+  sources:
+    - url: ../
+      edit_url: ~
+      version: main
+      start_paths:
+        - arc42-sample/src/main/docs
+asciidoc:
+  attributes:
+    sectanchors: true
+output: 
+  dir: ./target/docs
+  destinations: 
+  - provider: archive 
+    path: ./target/arc42-sample.zip 
+ui:
+  bundle:
+    url: https://gitlab.com/antora/antora-ui-default/-/jobs/artifacts/HEAD/raw/build/ui-bundle.zip?job=bundle-stable
+    snapshot: true
+runtime:
+  fetch: true
+  cache_dir: ./target/cache
+  log:
+    format: pretty
+#    level: all
+#    destination:
+#      file: ./antora.log
+#      append: false
+#      buffer_size: 4096
+#      sync: false
+antora:
+  extensions:
+    - require: '@djencks/asciidoctor-jsonpath'
+    - require: '@djencks/asciidoctor-antora-indexer'
+    - require: '@antora/lunr-extension'
+      index_latest_only: true
+      

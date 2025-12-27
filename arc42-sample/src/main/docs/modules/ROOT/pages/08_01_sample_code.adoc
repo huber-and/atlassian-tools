@@ -1,0 +1,14 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[section-concepts]]
+= 8.1 Sample Code Block
+
+
+[source,java]
+----
+public interface Transformer {
+
+	Result transform(Page page, Element content);
+	
+}
+----

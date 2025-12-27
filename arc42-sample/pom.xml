@@ -15,7 +15,11 @@
 		arc42 sample
 	</description>
 
-
+	<properties>
+		<node.version>v22.18.0</node.version>
+		<npm.version>11.6.1</npm.version>
+		<antora.version>3.1.14</antora.version>
+	</properties>
 	<build>
 		<resources>
 			<resource>
@@ -25,25 +29,56 @@
 		</resources>
 		<plugins>
 			<plugin>
+				<groupId>com.github.eirslett</groupId>
+				<artifactId>frontend-maven-plugin</artifactId>
+				<version>1.15.0</version>
+				<executions>
+					<execution>
+						<id>install-node-npm</id>
+						<goals>
+							<goal>install-node-and-npm</goal>
+						</goals>
+						<phase>initialize</phase>
+						<configuration>
+							<nodeVersion>${node.version}</nodeVersion>
+							<npmVersion>${npm.version}</npmVersion>
+						</configuration>
+					</execution>
+					<execution>
+						<id>install-antora</id>
+						<goals>
+							<goal>npm</goal>
+						</goals>
+						<phase>initialize</phase>
+						<configuration>
+							<arguments>--ignore-scripts install
+								@antora/cli@${antora.version}
+								@antora/site-generator-default@${antora.version}</arguments>
+						</configuration>
+					</execution>
+					<execution>
+						<id>docs-playbook</id>
+						<goals>
+							<goal>npx</goal>
+						</goals>
+						<phase>compile</phase>
+						<configuration>
+							<arguments>antora --stacktrace local-playbook.yml</arguments>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
 				<groupId>com.github.huber-and.atlassian</groupId>
 				<artifactId>atlassian-maven-plugin</artifactId>
 				<version>${revision}${changelist}</version>
-				<executions>
-					<execution>
-						<id>generate-code</id>
-						<phase>install</phase>
-						<goals>
-							<goal>publish</goal>
-						</goals>
-					</execution>
-				</executions>
 				<configuration>
 					<url>${wiki.url}</url>
 					<mappers>
 						<mapper>
-							<spaceKey>arc42test</spaceKey>
+							<spaceKey>arc42sample</spaceKey>
 							<root>Architecture</root>
-							<path>${project.basedir}/src/data/sample/generic/2.1</path>
+							<path>${project.basedir}/target/docs/docs/main</path>
 						</mapper>
 					</mappers>
 				</configuration>
