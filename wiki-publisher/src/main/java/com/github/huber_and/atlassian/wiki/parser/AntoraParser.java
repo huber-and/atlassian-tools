@@ -54,6 +54,9 @@ public class AntoraParser implements Parser {
 		final List<Page> roots = new ArrayList<>();
 
 		for (final Element child : menu.getElementsByTag("a")) {
+			if (!child.parent().hasAttr("data-depth")) {
+				continue;
+			}
 			final var depth = Integer.parseInt(child.parent().attr("data-depth"));
 			final var href = child.attr("href");
 			Path source = null;
