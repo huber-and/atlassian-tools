@@ -38,6 +38,7 @@ public class ConfluenceTransformer implements Transformer {
 
 		content.selectFirst("h1.page").forEach(Element::remove);
 		transformImages(page, content, result);
+		transformCodeBlocks(content);
 		result.setContent(sanitizeBody(content));
 		return result;
 	}
@@ -70,6 +71,19 @@ public class ConfluenceTransformer implements Transformer {
 		acImage.appendElement("ri:attachment", "ri").attr("ri:filename", attachment.getFileName());
 		image.replaceWith(acImage);
 		log.info("Image is now {}", acImage.parent());
+	}
+
+	private void transformCodeBlocks(final Element content) {
+		content.select("pre > code").forEach(code -> {
+			final var parent = code.parent();
+			final var language = code.attr("data-lang");
+			final var codeMacro = new Element("ac:structured-macro", "ac");
+			codeMacro.attr("ac:name", "code");
+			codeMacro.appendElement("ac:parameter", "ac").attr("ac:name", "language").appendText(language);
+			codeMacro.appendElement("ac:plain-text-body", "ac").appendElement("cdata-placeholder")
+					.appendText(code.html());
+			parent.replaceWith(codeMacro);
+		});
 	}
 
 	private String sanitizeBody(final Element body) {
