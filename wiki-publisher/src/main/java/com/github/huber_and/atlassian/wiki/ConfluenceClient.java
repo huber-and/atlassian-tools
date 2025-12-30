@@ -15,6 +15,7 @@
  */
 package com.github.huber_and.atlassian.wiki;
 
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -24,6 +25,7 @@ import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 
+import com.github.huber_and.atlassian.wiki.Configuration.Mapper;
 import com.github.huber_and.atlassian.wiki.parser.Parser;
 import com.github.huber_and.atlassian.wiki.transformer.Transformer;
 
@@ -62,16 +64,14 @@ public class ConfluenceClient {
 		clientV1 = new ApiClient();
 		clientV1.setUsername(config.getUsername());
 		clientV1.setPassword(config.getPassword());
-		final var serverV1 = new ServerConfiguration(config.getUrl() + "/rest/api", null,
-				Collections.emptyMap());
+		final var serverV1 = new ServerConfiguration(config.getUrl() + "/rest/api", null, Collections.emptyMap());
 		clientV1.setServers(Collections.singletonList(serverV1));
 		clientV1.setServerIndex(0);
 
 		clientV2 = new ApiClient();
 		clientV2.setUsername(config.getUsername());
 		clientV2.setPassword(config.getPassword());
-		final var serverV2 = new ServerConfiguration(config.getUrl() + "/api/v2", null,
-				Collections.emptyMap());
+		final var serverV2 = new ServerConfiguration(config.getUrl() + "/api/v2", null, Collections.emptyMap());
 		clientV2.setServers(Collections.singletonList(serverV2));
 		clientV2.setServerIndex(0);
 		attachmentsApi = new ContentAttachmentsApi(clientV1);
@@ -81,32 +81,35 @@ public class ConfluenceClient {
 	}
 
 	/**
-	 * Merge the Confluence pages into the List fir synchronizing
+	 * Update the given list of pages in the given confluence space
 	 *
+	 * @param mapper
 	 * @param pages
+	 * @throws Exception
 	 */
-	public void updatePages(final String spaceKey, final String base, final List<Page> pages) throws Exception {
-		var spaceId = spaceKey;
+	public void updatePages(final Mapper mapper, final List<Page> pages) throws Exception {
+		var spaceId = mapper.getSpaceKey();
 		List<PageBulk> list = Collections.emptyList();
 		if (!config.isDebug()) {
 			final var space = spaceApi
-					.getSpaces(null, List.of(spaceKey), null, null, null, null, null, null, null, null, null, null)
+					.getSpaces(null, List.of(spaceId), null, null, null, null, null, null, null, null, null, null)
 					.getResults().getFirst();
 			spaceId = space.getId();
 			list = pageApi.getPagesInSpace(Long.parseLong(space.getId()), "all", null, List.of("current"), null, null,
 					null, null).getResults().stream().toList();
 		}
 		PageBulk root = null;
-		if (StringUtils.isNotBlank(base)) {
-			root = createOrUpdatePage(new Page(base, null, null), null, spaceId, list);
+		if (StringUtils.isNotBlank(mapper.getRoot())) {
+			root = createOrUpdatePage(new Page(mapper.getRoot(), Path.of(mapper.getPath(), "index.html"), null), null,
+					spaceId, list);
 		}
 		for (final Page page : pages) {
 			createOrUpdatePage(page, root != null ? root.getId() : null, spaceId, list);
 		}
 	}
 
-	protected PageBulk createOrUpdatePage(final Page page, final String parentId, final String spaceId, final List<PageBulk> list)
-			throws Exception {
+	protected PageBulk createOrUpdatePage(final Page page, final String parentId, final String spaceId,
+			final List<PageBulk> list) throws Exception {
 		log.info("Create or update page {} ", page.getTitle());
 		final var remote = getOrCreatePage(page, parentId, spaceId, list);
 		if (page.getSource() != null) {
@@ -122,10 +125,10 @@ public class ConfluenceClient {
 
 	}
 
-	private PageBulk getOrCreatePage(final Page page, final String parentId, final String spaceId, final List<PageBulk> list) throws Exception {
+	private PageBulk getOrCreatePage(final Page page, final String parentId, final String spaceId,
+			final List<PageBulk> list) throws Exception {
 		final var title = page.getTitle();
-		final var result = list.stream().filter(r -> Strings.CS.equals(page.getTitle(), r.getTitle()))
-				.findFirst();
+		final var result = list.stream().filter(r -> Strings.CS.equals(page.getTitle(), r.getTitle())).findFirst();
 
 		PageBulk remote = null;
 		if (result.isPresent()) {
@@ -134,8 +137,8 @@ public class ConfluenceClient {
 		} else {
 			String pageId;
 			if (!config.isDebug()) {
-				final var response = pageApi.createPage(CreatePageRequest.builder().parentId(parentId)
-						.spaceId(spaceId).title(title)
+				final var response = pageApi.createPage(CreatePageRequest.builder().parentId(parentId).spaceId(spaceId)
+						.title(title)
 						.body(CreatePageRequestBody.builder().value(page.getTitle())
 								.representation(CreatePageRequestBody.RepresentationEnum.STORAGE).build())
 						.build(), null, null, null);
@@ -159,7 +162,8 @@ public class ConfluenceClient {
 			return;
 		}
 		try {
-			final var version = remote.getVersion().getNumber() + 1;
+			var version = (int) remote.getVersion().getNumber();
+			version++;
 
 			final var request = UpdatePageRequest.builder().id(remote.getId()).title(remote.getTitle())
 					.status(UpdatePageRequest.StatusEnum.CURRENT)
@@ -168,8 +172,8 @@ public class ConfluenceClient {
 							.representation(CreatePageRequestBody.RepresentationEnum.STORAGE).value(body).build())
 					.build();
 			pageApi.updatePage(Long.parseLong(remote.getId()), request);
-			final var properties = propertiesApi
-					.getPageContentProperties(Long.parseLong(remote.getId()), null, null, null, null);
+			final var properties = propertiesApi.getPageContentProperties(Long.parseLong(remote.getId()), null, null,
+					null, null);
 			final Map<String, Object> list = new HashMap<>();
 			properties.getResults().forEach(p -> list.put(p.getKey(), p));
 			if (!list.containsKey("content-appearance-draft")) {

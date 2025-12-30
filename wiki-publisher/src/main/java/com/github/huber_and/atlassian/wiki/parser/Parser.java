@@ -25,7 +25,21 @@ import com.github.huber_and.atlassian.wiki.Page;
 
 public interface Parser {
 
+	/**
+	 * Resolve the list of pages from the given root path
+	 *
+	 * @param root
+	 * @return
+	 * @throws IOException
+	 */
 	List<Page> resolvePages(Path root) throws IOException;
 
+	/**
+	 * Load the content of the given page
+	 *
+	 * @param page
+	 * @return
+	 * @throws IOException
+	 */
 	Element loadContent(Page page) throws IOException;
 }

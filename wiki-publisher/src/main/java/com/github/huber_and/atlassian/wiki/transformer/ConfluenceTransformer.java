@@ -35,8 +35,10 @@ public class ConfluenceTransformer implements Transformer {
 	public Result transform(final Page page, final Element content) {
 		final var result = new Result();
 		log.info("Transform Page {} from {}", page.getTitle(), page.getSource());
-
-		content.selectFirst("h1.page").forEach(Element::remove);
+		final Element title = content.selectFirst("h1.page");
+		if (title != null) {
+			title.remove();
+		}
 		transformImages(page, content, result);
 		transformCodeBlocks(content);
 		result.setContent(sanitizeBody(content));

@@ -16,7 +16,6 @@
 package com.github.huber_and.atlassian.wiki;
 
 import java.nio.file.Path;
-import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -46,11 +45,10 @@ public class Publisher {
 	}
 
 	protected void publish(final Mapper mapper) {
-		List<Page> pages;
 		try {
-			pages = parser.resolvePages(Path.of(mapper.getPath()));
+			final var pages = parser.resolvePages(Path.of(mapper.getPath()));
 			pages.forEach(p -> dump(p, 1));
-			client.updatePages(mapper.getSpaceKey(), mapper.getRoot(), pages);
+			client.updatePages(mapper, pages);
 		} catch (final Exception e) {
 			log.error("Failed to publish to space {}", mapper.getSpaceKey(), e);
 		}

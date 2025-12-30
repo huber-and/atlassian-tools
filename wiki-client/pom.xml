@@ -37,8 +37,6 @@
 							<!-- Webclient generator config -->
 							<generatorName>java</generatorName>
 							<library>apache-httpclient</library>
-
-							<!-- Reference to the Petstore spec -->
 							<inputSpec>
 								${project.basedir}/src/main/openapi/ConfluenceV2.json
 							</inputSpec>
