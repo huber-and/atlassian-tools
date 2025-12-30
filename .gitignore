@@ -12,3 +12,4 @@
 **/.flattened-pom.xml
 **/node/
 **/node_modules/
+**/*TestLocal.java
