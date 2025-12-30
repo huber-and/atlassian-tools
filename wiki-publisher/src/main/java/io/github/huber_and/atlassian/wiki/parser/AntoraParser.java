@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.huber_and.atlassian.wiki.parser;
+package io.github.huber_and.atlassian.wiki.parser;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -26,8 +26,8 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Entities;
 
-import com.github.huber_and.atlassian.wiki.Configuration;
-import com.github.huber_and.atlassian.wiki.Page;
+import io.github.huber_and.atlassian.wiki.Configuration;
+import io.github.huber_and.atlassian.wiki.Page;
 
 import lombok.extern.slf4j.Slf4j;
 

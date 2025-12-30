@@ -13,16 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.huber_and.atlassian.wiki;
+package io.github.huber_and.atlassian.wiki;
 
 import java.nio.file.Path;
 
 import org.apache.commons.lang3.StringUtils;
 
-import com.github.huber_and.atlassian.wiki.Configuration.Mapper;
-import com.github.huber_and.atlassian.wiki.parser.AntoraParser;
-import com.github.huber_and.atlassian.wiki.parser.Parser;
-import com.github.huber_and.atlassian.wiki.transformer.ConfluenceTransformer;
+import io.github.huber_and.atlassian.wiki.Configuration.Mapper;
+import io.github.huber_and.atlassian.wiki.parser.AntoraParser;
+import io.github.huber_and.atlassian.wiki.parser.Parser;
+import io.github.huber_and.atlassian.wiki.transformer.ConfluenceTransformer;
 
 import lombok.extern.slf4j.Slf4j;
 

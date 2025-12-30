@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.huber_and.atlassian.wiki.parser;
+package io.github.huber_and.atlassian.wiki.parser;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -21,7 +21,7 @@ import java.util.List;
 
 import org.jsoup.nodes.Element;
 
-import com.github.huber_and.atlassian.wiki.Page;
+import io.github.huber_and.atlassian.wiki.Page;
 
 /**
  * Interface for parsing pages from various sources.

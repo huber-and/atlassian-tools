@@ -3,7 +3,7 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
 	<parent>
-		<groupId>com.github.huber-and.atlassian</groupId>
+		<groupId>io.github.huber-and.atlassian</groupId>
 		<artifactId>atlassian-tools</artifactId>
 		<version>${revision}${changelist}</version>
 		<relativePath>../</relativePath>
@@ -14,6 +14,7 @@
 	<description>
 		Atlassian tools Maven plugin
 	</description>
+
 	<build>
 		<resources>
 			<resource>
@@ -80,7 +81,7 @@
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
-			<groupId>com.github.huber-and.atlassian</groupId>
+			<groupId>io.github.huber-and.atlassian</groupId>
 			<artifactId>wiki-publisher</artifactId>
 			<version>${revision}${changelist}</version>
 		</dependency>

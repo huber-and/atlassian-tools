@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.huber_and.maven.atlassian.wiki;
+package io.github.huber_and.maven.atlassian.wiki;
 
 import java.net.URI;
 import java.util.Set;
@@ -27,8 +27,8 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 
-import com.github.huber_and.atlassian.wiki.Configuration;
-import com.github.huber_and.atlassian.wiki.Publisher;
+import io.github.huber_and.atlassian.wiki.Configuration;
+import io.github.huber_and.atlassian.wiki.Publisher;
 
 /**
  * Maven Mojo for publishing pages to Confluence.

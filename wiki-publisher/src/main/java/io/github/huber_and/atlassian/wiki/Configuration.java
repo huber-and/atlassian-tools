@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.huber_and.atlassian.wiki;
+package io.github.huber_and.atlassian.wiki;
 
 import java.util.HashSet;
 import java.util.Set;

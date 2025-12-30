@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.huber_and.atlassian.wiki.transformer;
+package io.github.huber_and.atlassian.wiki.transformer;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import org.jsoup.nodes.Element;
 
-import com.github.huber_and.atlassian.wiki.Attachment;
-import com.github.huber_and.atlassian.wiki.Page;
+import io.github.huber_and.atlassian.wiki.Attachment;
+import io.github.huber_and.atlassian.wiki.Page;
 
 import lombok.Data;
 
