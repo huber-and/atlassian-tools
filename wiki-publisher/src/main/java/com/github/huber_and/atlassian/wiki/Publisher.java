@@ -26,24 +26,59 @@ import com.github.huber_and.atlassian.wiki.transformer.ConfluenceTransformer;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Main publisher class for publishing content to Confluence.
+ *
+ * This class orchestrates the entire publishing process, coordinating between the parser,
+ * transformer, and Confluence client. It processes all configured mappers and publishes
+ * content to their respective Confluence spaces.
+ *
+ * @author Andreas Huber
+ */
 @Slf4j
 public class Publisher {
 
+	/** The configuration containing space mappings and authentication details. */
 	private final Configuration config;
+
+	/** The Confluence client for API interactions. */
 	private final ConfluenceClient client;
+
+	/** The parser for extracting page content from source files. */
 	private final Parser parser;
 
+	/**
+	 * Constructs a Publisher with the given configuration.
+	 *
+	 * Initializes the parser and Confluence client based on the provided configuration.
+	 *
+	 * @param config the publisher configuration
+	 */
 	public Publisher(final Configuration config) {
 		this.config = config;
 		parser = new AntoraParser(config);
 		client = new ConfluenceClient(config, parser, new ConfluenceTransformer());
 	}
 
+	/**
+	 * Publishes content to all configured Confluence spaces.
+	 *
+	 * Iterates through all mappers in the configuration and publishes content to each
+	 * specified space.
+	 */
 	public void publish() {
 
 		config.getMappers().forEach(this::publish);
 	}
 
+	/**
+	 * Publishes content to a specific Confluence space using the given mapper.
+	 *
+	 * Parses the source content, logs the page hierarchy, and updates pages in the
+	 * target Confluence space. Any errors are logged without stopping the process.
+	 *
+	 * @param mapper the space mapper defining the target space and source path
+	 */
 	protected void publish(final Mapper mapper) {
 		try {
 			final var pages = parser.resolvePages(Path.of(mapper.getPath()));
@@ -55,6 +90,14 @@ public class Publisher {
 
 	}
 
+	/**
+	 * Logs the page hierarchy for debugging purposes.
+	 *
+	 * Recursively prints the page structure with indentation based on hierarchy depth.
+	 *
+	 * @param page the page to log
+	 * @param depth the current depth in the hierarchy
+	 */
 	private void dump(final Page page, final int depth) {
 		log.info("{}> {}", StringUtils.repeat('-', depth), page.getTitle());
 		page.getChildren().forEach(p -> dump(p, depth + 1));

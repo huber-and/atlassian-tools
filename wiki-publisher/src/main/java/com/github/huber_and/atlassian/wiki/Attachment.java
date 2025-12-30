@@ -19,10 +19,21 @@ import java.nio.file.Path;
 
 import lombok.Data;
 
+/**
+ * Represents a file attachment for Confluence pages.
+ *
+ * This class encapsulates the information needed to upload a file as an attachment
+ * to a Confluence page, including the file name and the source path.
+ *
+ * @author Andreas Huber
+ */
 @Data
 public class Attachment {
 
+	/** The name of the attachment file. */
 	private String fileName;
+
+	/** The source path to the attachment file. */
 	private Path source;
 
 }

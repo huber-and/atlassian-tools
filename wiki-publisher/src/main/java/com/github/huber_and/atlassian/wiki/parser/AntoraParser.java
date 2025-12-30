@@ -31,15 +31,40 @@ import com.github.huber_and.atlassian.wiki.Page;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Parser for Antora-based documentation.
+ *
+ * This parser is specifically designed to handle Antora-generated documentation,
+ * extracting page hierarchies from the Antora HTML structure by parsing navigation menus
+ * and source files.
+ *
+ * @author Andreas Huber
+ */
 @Slf4j
 public class AntoraParser implements Parser {
 
+	/** The configuration for parser behavior. */
 	private final Configuration config;
 
+	/**
+	 * Constructs an AntoraParser with the given configuration.
+	 *
+	 * @param config the parser configuration
+	 */
 	public AntoraParser(final Configuration config) {
 		this.config = config;
 	}
 
+	/**
+	 * Resolves the hierarchical list of pages from Antora documentation.
+	 *
+	 * Parses the index.html file to extract the navigation menu and page structure,
+	 * constructing a tree of Page objects based on the menu hierarchy.
+	 *
+	 * @param root the root path of the Antora documentation
+	 * @return a list of root-level pages from the navigation structure
+	 * @throws IOException if an error occurs while reading the index.html file
+	 */
 	@Override
 	public List<Page> resolvePages(final Path root) throws IOException {
 

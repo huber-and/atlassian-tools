@@ -22,14 +22,40 @@ import java.util.Objects;
 
 import lombok.Getter;
 
+/**
+ * Represents a Confluence page with hierarchical structure.
+ *
+ * A page can have a parent page and multiple child pages, forming a tree structure that
+ * mirrors the page hierarchy in Confluence. Each page has a title, an optional source file,
+ * and maintains references to its parent and children.
+ *
+ * @author Andreas Huber
+ */
 @Getter
 public class Page {
 
+	/** The title of the page. */
 	private final String title;
+
+	/** The source file path for the page content. */
 	private final Path source;
+
+	/** The parent page in the hierarchy, or null if this is a root page. */
 	private final Page parent;
+
+	/** The list of child pages under this page. */
 	private final List<Page> children = new ArrayList<>();
 
+	/**
+	 * Constructs a new Page with the given title, source, and parent.
+	 *
+	 * If a parent is provided and this page is not already in the parent's children list,
+	 * it will be added automatically.
+	 *
+	 * @param title the title of the page
+	 * @param source the source file path containing the page content
+	 * @param parent the parent page, or null if this is a root page
+	 */
 	public Page(final String title, final Path source, final Page parent) {
 		this.title = title;
 		this.source = source;

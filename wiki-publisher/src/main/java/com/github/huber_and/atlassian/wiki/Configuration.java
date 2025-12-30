@@ -22,23 +22,50 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Configuration for Confluence publishing operations.
+ *
+ * This class holds the necessary configuration parameters for connecting to and
+ * publishing content to Confluence, including authentication credentials and space
+ * mappings.
+ *
+ * @author Andreas Huber
+ */
 @Data
 public class Configuration {
 
+	/** The base URL of the Confluence instance. */
 	private String url;
+
+	/** The username for authentication with Confluence. */
 	private String username;
+
+	/** The password or API token for authentication with Confluence. */
 	private String password;
 
+	/** Enable debug mode for dry-run operations without actual publishing. */
 	private boolean debug;
 
+	/** Set of space mappers defining how content maps to Confluence spaces. */
 	private Set<Mapper> mappers = new HashSet<>();
 
+	/**
+	 * Mapper configuration that defines how local content maps to Confluence spaces.
+	 *
+	 * Maps a local directory structure to a specific Confluence space with an optional
+	 * root page.
+	 */
 	@Data
 	@NoArgsConstructor
 	@AllArgsConstructor
 	public static class Mapper {
+		/** The Confluence space key where content will be published. */
 		private String spaceKey;
+
+		/** The root page title under which content will be organized (optional). */
 		private String root;
+
+		/** The local file system path containing the content to publish. */
 		private String path;
 	}
 }

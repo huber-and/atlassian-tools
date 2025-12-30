@@ -23,23 +23,37 @@ import org.jsoup.nodes.Element;
 
 import com.github.huber_and.atlassian.wiki.Page;
 
+/**
+ * Interface for parsing pages from various sources.
+ *
+ * Implementations of this interface handle the extraction and parsing of page content
+ * from different source formats and locations, converting them into a structured Page hierarchy.
+ *
+ * @author Andreas Huber
+ */
 public interface Parser {
 
 	/**
-	 * Resolve the list of pages from the given root path
+	 * Resolves the hierarchical list of pages from the given root path.
 	 *
-	 * @param root
-	 * @return
-	 * @throws IOException
+	 * Parses the source files at the specified root path and constructs a tree of
+	 * Page objects representing the page hierarchy.
+	 *
+	 * @param root the root path containing the source files
+	 * @return a list of root-level pages parsed from the source
+	 * @throws IOException if an error occurs while reading source files
 	 */
 	List<Page> resolvePages(Path root) throws IOException;
 
 	/**
-	 * Load the content of the given page
+	 * Loads the content of the given page from its source file.
 	 *
-	 * @param page
-	 * @return
-	 * @throws IOException
+	 * Reads and parses the HTML content for the specified page, returning it as a
+	 * JSoup Element for further processing.
+	 *
+	 * @param page the page whose content should be loaded
+	 * @return the parsed HTML content as a JSoup Element
+	 * @throws IOException if an error occurs while reading the source file
 	 */
 	Element loadContent(Page page) throws IOException;
 }

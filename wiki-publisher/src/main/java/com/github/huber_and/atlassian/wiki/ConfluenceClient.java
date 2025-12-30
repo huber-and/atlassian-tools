@@ -44,19 +44,52 @@ import net.atlassian.wiki.rest.v2.model.PageBulk;
 import net.atlassian.wiki.rest.v2.model.UpdatePageRequest;
 import net.atlassian.wiki.rest.v2.model.UpdatePageRequestVersion;
 
+/**
+ * Client for publishing content to Confluence.
+ *
+ * This class manages the interaction with the Confluence REST API, handling the creation,
+ * update, and publishing of pages and attachments to a Confluence instance. It coordinates
+ * with parsers and transformers to convert source content into Confluence storage format.
+ *
+ * @author Andreas Huber
+ */
 @Slf4j
 public class ConfluenceClient {
 
+	/** Configuration containing Confluence credentials and settings. */
 	private final Configuration config;
+
+	/** REST API client for Confluence v1 endpoints. */
 	private final ApiClient clientV1;
+
+	/** REST API client for Confluence v2 endpoints. */
 	private final ApiClient clientV2;
+
+	/** API for managing content attachments. */
 	private final ContentAttachmentsApi attachmentsApi;
+
+	/** API for managing content properties. */
 	private final ContentPropertiesApi propertiesApi;
+
+	/** API for managing Confluence spaces. */
 	private final SpaceApi spaceApi;
+
+	/** API for managing Confluence pages. */
 	private final PageApi pageApi;
+
+	/** Parser for extracting page content from source files. */
 	private final Parser parser;
+
+	/** Transformer for converting content to Confluence storage format. */
 	private final Transformer transformer;
 
+	/**
+	 * Constructs a ConfluenceClient with the given configuration and converters.
+	 *
+	 * @param config the Confluence configuration
+	 * @param parser the content parser
+	 * @param transformer the content transformer
+	 */
 	public ConfluenceClient(final Configuration config, final Parser parser, final Transformer transformer) {
 		this.config = config;
 		this.parser = parser;
@@ -81,11 +114,14 @@ public class ConfluenceClient {
 	}
 
 	/**
-	 * Update the given list of pages in the given confluence space
+	 * Updates or creates the given list of pages in the specified Confluence space.
 	 *
-	 * @param mapper
-	 * @param pages
-	 * @throws Exception
+	 * If a root page is configured, all pages are created under it. Otherwise, they are
+	 * created at the space root level. Each page and its children are recursively processed.
+	 *
+	 * @param mapper the space mapper defining the target space and configuration
+	 * @param pages the list of pages to update or create
+	 * @throws Exception if an error occurs during the update operation
 	 */
 	public void updatePages(final Mapper mapper, final List<Page> pages) throws Exception {
 		var spaceId = mapper.getSpaceKey();
@@ -108,6 +144,16 @@ public class ConfluenceClient {
 		}
 	}
 
+	/**
+	 * Creates or updates a page in Confluence with its content and attachments.
+	 *
+	 * @param page the page to create or update
+	 * @param parentId the parent page ID, or null if at root level
+	 * @param spaceId the target space ID
+	 * @param list existing pages in the space for lookup
+	 * @return the created or updated page
+	 * @throws Exception if an error occurs during the operation
+	 */
 	protected PageBulk createOrUpdatePage(final Page page, final String parentId, final String spaceId,
 			final List<PageBulk> list) throws Exception {
 		log.info("Create or update page {} ", page.getTitle());

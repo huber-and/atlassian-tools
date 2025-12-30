@@ -25,12 +25,38 @@ import com.github.huber_and.atlassian.wiki.Page;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Transformer to convert HTML content to Confluence storage format.
+ *
+ * This implementation handles the transformation of HTML content into the Confluence Storage Format,
+ * including:
+ * <ul>
+ *   <li>Converting image references to Confluence attachment references</li>
+ *   <li>Transforming code blocks into Confluence code macros</li>
+ *   <li>Sanitizing HTML content by removing unnecessary attributes</li>
+ *   <li>Handling CDATA sections for proper XML structure</li>
+ * </ul>
+ *
+ * @author Andreas Huber
+ */
 @Slf4j
 public class ConfluenceTransformer implements Transformer {
 
+	/** Placeholder for CDATA section start. */
 	private static final String CDATA_PLACEHOLDER_START = "<cdata-placeholder>";
+
+	/** Placeholder for CDATA section end. */
 	private static final String CDATA_PLACEHOLDER_END = "</cdata-placeholder>";
 
+	/**
+	 * Transforms page content to Confluence storage format.
+	 *
+	 * Removes the page title, transforms images and code blocks, and sanitizes the content.
+	 *
+	 * @param page the page being transformed
+	 * @param content the HTML content to transform
+	 * @return a Result containing the transformed content and discovered attachments
+	 */
 	@Override
 	public Result transform(final Page page, final Element content) {
 		final var result = new Result();
@@ -45,10 +71,27 @@ public class ConfluenceTransformer implements Transformer {
 		return result;
 	}
 
+	/**
+	 * Transforms all image elements in the content to Confluence attachment references.
+	 *
+	 * @param page the page containing the images
+	 * @param content the HTML content containing image elements
+	 * @param result the transformation result to add attachments to
+	 */
 	private void transformImages(final Page page, final Element content, final Result result) {
 		content.getElementsByTag("img").forEach(i -> transformImage(page, i, result));
 	}
 
+	/**
+	 * Transforms a single image element to a Confluence attachment reference.
+	 *
+	 * Extracts image metadata, registers the image file as an attachment,
+	 * and replaces the HTML img tag with a Confluence ac:image element.
+	 *
+	 * @param page the page containing the image
+	 * @param image the image element to transform
+	 * @param result the transformation result to add the attachment to
+	 */
 	private void transformImage(final Page page, final Element image, final Result result) {
 		final var src = image.attr("src");
 		final var imgWidth = image.attr("width");
@@ -75,6 +118,14 @@ public class ConfluenceTransformer implements Transformer {
 		log.info("Image is now {}", acImage.parent());
 	}
 
+	/**
+	 * Transforms all code block elements to Confluence code macros.
+	 *
+	 * Extracts the programming language from data attributes and wraps
+	 * the code content in a Confluence structured code macro.
+	 *
+	 * @param content the HTML content containing code blocks
+	 */
 	private void transformCodeBlocks(final Element content) {
 		content.select("pre > code").forEach(code -> {
 			final var parent = code.parent();
@@ -88,6 +139,14 @@ public class ConfluenceTransformer implements Transformer {
 		});
 	}
 
+	/**
+	 * Sanitizes the HTML body by removing unnecessary attributes and handling CDATA sections.
+	 *
+	 * Removes all class attributes and wraps CDATA content with proper markers.
+	 *
+	 * @param body the HTML body element to sanitize
+	 * @return the sanitized HTML as a string
+	 */
 	private String sanitizeBody(final Element body) {
 		body.forEach(e -> e.removeAttr("class"));
 		var html = body.html().trim();

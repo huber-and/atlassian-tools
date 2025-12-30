@@ -30,22 +30,66 @@ import org.apache.maven.plugins.annotations.Parameter;
 import com.github.huber_and.atlassian.wiki.Configuration;
 import com.github.huber_and.atlassian.wiki.Publisher;
 
+/**
+ * Maven Mojo for publishing pages to Confluence.
+ *
+ * This Mojo integrates Confluence page publishing into the Maven build lifecycle,
+ * allowing documentation to be published to Confluence as part of the build process.
+ *
+ * The Mojo can be configured with credentials directly or by using Maven server configuration.
+ * If no username is provided, it will attempt to retrieve credentials from the Maven settings
+ * for the host specified in the URL.
+ *
+ * Usage in pom.xml:
+ * <pre>
+ * &lt;plugin&gt;
+ *   &lt;groupId&gt;com.github.huber-and.atlassian&lt;/groupId&gt;
+ *   &lt;artifactId&gt;atlassian-maven-plugin&lt;/artifactId&gt;
+ *   &lt;configuration&gt;
+ *     &lt;url&gt;https://confluence.example.com&lt;/url&gt;
+ *     &lt;mappers&gt;
+ *       &lt;mapper&gt;
+ *         &lt;spaceKey&gt;MYSPACE&lt;/spaceKey&gt;
+ *         &lt;path&gt;docs&lt;/path&gt;
+ *       &lt;/mapper&gt;
+ *     &lt;/mappers&gt;
+ *   &lt;/configuration&gt;
+ * &lt;/plugin&gt;
+ * </pre>
+ *
+ * @author Andreas Huber
+ */
 @Mojo(name = "publish", defaultPhase = LifecyclePhase.NONE)
 public class PagePublisherMojo extends AbstractMojo {
 
+	/** The base URL of the Confluence instance (e.g., https://confluence.example.com). */
 	@Parameter(property = "url", required = true)
 	private String url;
+
+	/** The username for authentication. If not provided, will use Maven server configuration. */
 	@Parameter(property = "username")
 	private String username;
+
+	/** The password or API token for authentication. */
 	@Parameter(property = "password")
 	private String password;
 
+	/** The current Maven session, used to access server configuration. */
 	@Parameter(defaultValue = "${session}", readonly = true, required = true)
 	private MavenSession session;
 
+	/** The set of mappers defining how local content maps to Confluence spaces. */
 	@Parameter(required = true)
 	private Set<Configuration.Mapper> mappers;
 
+	/**
+	 * Executes the Maven Mojo to publish pages to Confluence.
+	 *
+	 * Builds the configuration from parameters and Maven settings, then runs the publisher.
+	 *
+	 * @throws MojoExecutionException if an error occurs during execution
+	 * @throws MojoFailureException if the publication fails
+	 */
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
 		final var uri = URI.create(url);
