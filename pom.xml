@@ -15,9 +15,10 @@
 		<maven.compiler.target>21</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<enforcer.plugin.version>3.6.0</enforcer.plugin.version>
+		<flatten.plugin.version>1.7.1</flatten.plugin.version>
 		<maven-plugin.version>3.9.0</maven-plugin.version>
 		<maven-plugin-tools.version>3.15.2</maven-plugin-tools.version>
-		<flatten.plugin.version>1.7.1</flatten.plugin.version>
 	</properties>
 	<build>
 		<plugins>
@@ -44,6 +45,27 @@
 						<goals>
 							<goal>clean</goal>
 						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<version>${enforcer.plugin.version}</version>
+				<inherited>true</inherited>
+				<executions>
+					<execution>
+						<id>enforce-maven</id>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<requireMavenVersion>
+									<version>3.9</version>
+								</requireMavenVersion>
+							</rules>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>
@@ -81,5 +103,37 @@
 			<url>https://maven.pkg.github.com/huber-and/atlassian-tools</url>
 		</repository>
 	</distributionManagement>
+	<profiles>
+		<profile>
+			<id>release</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-enforcer-plugin</artifactId>
+						<version>3.6.0</version>
+						<configuration>
+							<rules>
+								<requireMavenVersion>
+									<version>3.9</version>
+								</requireMavenVersion>
+								<reactorModuleConvergence>
+									<message>The reactor is not valid</message>
+								</reactorModuleConvergence>
+								<requireReleaseDeps>
+									<message>No Snapshots Allowed!</message>
+								</requireReleaseDeps>
+								<requireReleaseVersion>
+									<message>No Snapshots Allowed!</message>
+								</requireReleaseVersion>
+							</rules>
+							<fail>true</fail>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+	</profiles>
 </project>
 
