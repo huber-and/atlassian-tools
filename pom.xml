@@ -3,11 +3,14 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.github.huber-and.atlassian</groupId>
+	<groupId>io.github.huber-and.atlassian</groupId>
 	<artifactId>atlassian-tools</artifactId>
 	<version>${revision}${changelist}</version>
 	<packaging>pom</packaging>
-	<description>Atlassian Tools</description>
+	<description>A comprehensive suite of Java tools and libraries for
+		integrating with Atlassian Confluence, including a REST API client, HTML
+		publishing utility, and Maven plugin.</description>
+	<url>https://github.com/huber-and/atlassian-tools</url>
 	<properties>
 		<revision>0.1</revision>
 		<changelist>-SNAPSHOT</changelist>
@@ -17,11 +20,77 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<enforcer.plugin.version>3.6.0</enforcer.plugin.version>
 		<flatten.plugin.version>1.7.1</flatten.plugin.version>
+		<gpg.plugin.version>3.2.8</gpg.plugin.version>
+		<javadoc.plugin.version>3.12.0</javadoc.plugin.version>
 		<maven-plugin.version>3.9.0</maven-plugin.version>
+		<source.plugin.version>3.4.0</source.plugin.version>
 		<maven-plugin-tools.version>3.15.2</maven-plugin-tools.version>
 	</properties>
+	<licenses>
+		<license>
+			<name>The Apache License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+		</license>
+	</licenses>
+	<developers>
+		<developer>
+			<name>Andreas Huber</name>
+			<email>andreas@the-hubers.de</email>
+			<url>https://github.com/huber-and/atlassian-tools</url>
+		</developer>
+	</developers>
+	<scm>
+		<connection>scm:git:git://github.com/huber-and/atlassian-tools.git</connection>
+		<developerConnection>
+			scm:git:ssh://github.com:huber-and/atlassian-tools.git</developerConnection>
+		<url>https://github.com/huber-and/atlassian-tools/tree/main</url>
+	</scm>
 	<build>
 		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>${source.plugin.version}</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar-no-fork</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>${javadoc.plugin.version}</version>
+				<executions>
+					<execution>
+						<id>attach-javadocs</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<failOnError>false</failOnError>
+				</configuration>
+				
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-gpg-plugin</artifactId>
+				<version>${gpg.plugin.version}</version>
+				<executions>
+					<execution>
+						<id>sign-artifacts</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>sign</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>flatten-maven-plugin</artifactId>
@@ -97,10 +166,13 @@
 		<module>arc42-sample</module>
 	</modules>
 	<distributionManagement>
+		<snapshotRepository>
+			<id>snapshots</id>
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+		</snapshotRepository>
 		<repository>
-			<id>github</id>
-			<name>GitHub Apache Maven Packages</name>
-			<url>https://maven.pkg.github.com/huber-and/atlassian-tools</url>
+			<id>maven</id>
+			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
 		</repository>
 	</distributionManagement>
 	<profiles>
