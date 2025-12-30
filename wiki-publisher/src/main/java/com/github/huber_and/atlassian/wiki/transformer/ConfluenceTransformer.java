@@ -89,6 +89,7 @@ public class ConfluenceTransformer implements Transformer {
 	}
 
 	private String sanitizeBody(final Element body) {
+		body.forEach(e -> e.removeAttr("class"));
 		var html = body.html().trim();
 		var start = html.indexOf(CDATA_PLACEHOLDER_START);
 		while (start > -1) {
