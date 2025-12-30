@@ -74,5 +74,12 @@
 		<module>maven-plugin</module>
 		<module>arc42-sample</module>
 	</modules>
+	<distributionManagement>
+		<repository>
+			<id>github</id>
+			<name>GitHub huber-and Apache Maven Packages</name>
+			<url>https://maven.pkg.github.com/huber-and/REPOSITORY</url>
+		</repository>
+	</distributionManagement>
 </project>
 
