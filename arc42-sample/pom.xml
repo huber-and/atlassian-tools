@@ -2,18 +2,12 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-	<parent>
-		<groupId>io.github.huber-and.atlassian</groupId>
-		<artifactId>atlassian-tools</artifactId>
-		<version>${revision}${changelist}</version>
-		<relativePath>../</relativePath>
-	</parent>
 	<modelVersion>4.0.0</modelVersion>
+	<groupId>io.github.huber-and.atlassian</groupId>
 	<artifactId>arc42-sample</artifactId>
+	<version>0.1.0-SNAPHOT</version>
 	<packaging>pom</packaging>
-	<description>
-		arc42 sample
-	</description>
+	<description>arc42 sample</description>
 
 	<properties>
 		<node.version>v22.18.0</node.version>
@@ -71,12 +65,17 @@
 			<plugin>
 				<groupId>io.github.huber-and.atlassian</groupId>
 				<artifactId>atlassian-maven-plugin</artifactId>
-				<version>${revision}${changelist}</version>
+				<version>0.1.0-SNAPSHOT</version>
 				<configuration>
 					<url>${wiki.url}</url>
 					<mappers>
 						<mapper>
 							<spaceKey>arc42sample</spaceKey>
+							<root>Architecture</root>
+							<path>${project.basedir}/target/docs/docs/main</path>
+						</mapper>
+						<mapper>
+							<spaceKey>arc42sample1</spaceKey>
 							<root>Architecture</root>
 							<path>${project.basedir}/target/docs/docs/main</path>
 						</mapper>
