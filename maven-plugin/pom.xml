@@ -11,8 +11,11 @@
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>atlassian-maven-plugin</artifactId>
 	<packaging>maven-plugin</packaging>
+	<name>Atlassian Tools Maven Plugin</name>
 	<description>
-		Atlassian tools Maven plugin
+		A Maven plugin that integrates Confluence page publishing into the Maven build lifecycle.
+		Enables automated documentation publishing to Confluence as part of the build process.
+		Supports credential management through Maven settings and flexible content mapping to Confluence spaces.
 	</description>
 
 	<build>
