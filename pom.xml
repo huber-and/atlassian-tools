@@ -147,6 +147,9 @@
 				<configuration>
 					<publishingServerId>central</publishingServerId>
 					<autoPublish>true</autoPublish>
+					<excludeArtifacts>
+						<param>arc42-sample</param>
+					</excludeArtifacts>
 				</configuration>
 			</plugin>
 		</plugins>
@@ -174,6 +177,7 @@
 		<module>wiki-client</module>
 		<module>wiki-publisher</module>
 		<module>maven-plugin</module>
+		<module>arc42-sample</module>
 	</modules>
 
 	<profiles>
