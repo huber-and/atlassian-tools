@@ -12,6 +12,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>wiki-publisher</artifactId>
 	<packaging>jar</packaging>
+	<name>Confluence HTML Publisher</name>
 	<description>
 		Helper to parse HTML files and upload to Confluence
 	</description>
