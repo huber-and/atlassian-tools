@@ -1,0 +1,69 @@
+@startuml sequence_diagram
+!theme plain
+title Wiki Publisher - Publishing Flow Sequence
+
+skinparam sequenceArrowColor #0066CC
+skinparam participantBackgroundColor #E8F4F8
+skinparam participantBorderColor #0066CC
+
+actor User
+participant Publisher
+participant Configuration
+participant Parser
+participant Transformer
+participant ConfluenceClient
+participant ConfluenceAPI
+
+User -> Publisher: new Publisher(config)
+Publisher -> Publisher: Initialize parser\n(AntoraParser)
+Publisher -> Publisher: Initialize client\n(ConfluenceClient)
+
+User -> Publisher: publish()
+Publisher -> Configuration: getMappers()
+Configuration --> Publisher: List<Mapper>
+
+loop For each mapper
+  Publisher -> Parser: resolvePages(path)
+  Parser --> Publisher: List<Page> (hierarchy)
+  
+  Publisher -> Publisher: dump(pages) [logging]
+  
+  Publisher -> ConfluenceClient: updatePages(mapper, pages)
+  
+  ConfluenceClient -> ConfluenceAPI: getSpaces(spaceKey)
+  ConfluenceAPI --> ConfluenceClient: Space info
+  
+  ConfluenceClient -> ConfluenceAPI: getPagesInSpace(spaceId)
+  ConfluenceAPI --> ConfluenceClient: List<PageBulk>
+  
+  opt if root page configured
+    ConfluenceClient -> ConfluenceClient: createOrUpdatePage(rootPage)
+    ConfluenceClient -> ConfluenceAPI: createPage() or updatePage()
+    ConfluenceAPI --> ConfluenceClient: PageBulk (root)
+  end
+  
+  loop For each page
+    ConfluenceClient -> Parser: loadContent(page)
+    Parser --> ConfluenceClient: Element (HTML)
+    
+    ConfluenceClient -> Transformer: transform(page, content)
+    Transformer --> ConfluenceClient: Result (storage format)
+    
+    ConfluenceClient -> ConfluenceAPI: updatePage(pageId, body)
+    ConfluenceAPI --> ConfluenceClient: Updated page
+    
+    ConfluenceClient -> ConfluenceAPI: setPageProperties()
+    ConfluenceAPI --> ConfluenceClient: Properties set
+    
+    loop For each attachment
+      ConfluenceClient -> ConfluenceAPI: createOrUpdateAttachments()
+      ConfluenceAPI --> ConfluenceClient: Attachment uploaded
+    end
+    
+    loop For each child page (recursively)
+      ConfluenceClient -> ConfluenceClient: createOrUpdatePage(child, parentId)
+    end
+  end
+end
+
+@enduml

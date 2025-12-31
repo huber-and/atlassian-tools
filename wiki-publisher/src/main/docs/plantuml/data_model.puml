@@ -1,0 +1,68 @@
+@startuml data_model
+!theme plain
+title Wiki Publisher - Data Model
+
+skinparam classBackgroundColor #E8F4F8
+skinparam classBorderColor #0066CC
+
+entity Page {
+  *title: String
+  *source: Path (optional)
+  *parent: Page (optional)
+  --
+  *children: List<Page>
+  +equals(): boolean
+  +hashCode(): int
+}
+
+entity Attachment {
+  *fileName: String
+  *source: Path
+}
+
+entity Configuration {
+  *url: String
+  *username: String
+  *password: String
+  *debug: boolean
+  --
+  *mappers: Set<Mapper>
+}
+
+entity Mapper {
+  *spaceKey: String
+  *root: String (optional)
+  *path: String
+}
+
+entity TransformResult {
+  *content: String
+  --
+  *attachments: List<Attachment>
+  +add(Attachment): void
+}
+
+entity PageBulk {
+  *id: String
+  *title: String
+  *spaceId: String
+  *parentId: String
+  *version: Version
+}
+
+entity Version {
+  *number: int
+}
+
+Page ||--o{ Page: parent/children
+Page ||--o{ Attachment: contains
+
+Configuration ||--o{ Mapper: contains
+
+TransformResult ||--o{ Attachment: returns
+
+PageBulk ||--|| Version: has
+
+Page --> PageBulk: remote mapping
+
+@enduml

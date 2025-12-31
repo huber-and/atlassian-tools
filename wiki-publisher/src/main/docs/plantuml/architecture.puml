@@ -1,0 +1,59 @@
+@startuml architecture
+!theme plain
+title Wiki Publisher - Architecture Overview
+
+skinparam packageBackgroundColor #FAFAFA
+skinparam componentBackgroundColor #E8F4F8
+skinparam interfaceBackgroundColor #F0E8F8
+
+package "Wiki Publisher" {
+  package "Core Components" {
+    component [Publisher] as pub
+    component [ConfluenceClient] as client
+    component [Configuration] as config
+  }
+
+  package "Data Models" {
+    component [Page] as page
+    component [Attachment] as attachment
+  }
+
+  package "Processing Pipeline" {
+    interface [Parser] as parser_iface
+    component [AntoraParser] as antora_parser
+
+    interface [Transformer] as transformer_iface
+    component [ConfluenceTransformer] as confluence_transformer
+  }
+
+  package "External APIs" {
+    component [PageApi] as page_api
+    component [SpaceApi] as space_api
+    component [ContentAttachmentsApi] as attachments_api
+    component [ContentPropertiesApi] as properties_api
+  }
+}
+
+pub --> config: uses
+pub --> parser_iface: uses
+pub --> client: delegates to
+
+client --> config: uses
+client --> parser_iface: uses
+client --> transformer_iface: uses
+client --> page_api: calls
+client --> space_api: calls
+client --> attachments_api: calls
+client --> properties_api: calls
+
+parser_iface <|-- antora_parser: implements
+antora_parser --> page: creates
+antora_parser --> config: uses
+
+transformer_iface <|-- confluence_transformer: implements
+confluence_transformer --> page: processes
+confluence_transformer --> attachment: extracts
+
+page --> attachment: contains
+
+@enduml

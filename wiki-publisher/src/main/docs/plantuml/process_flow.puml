@@ -1,0 +1,65 @@
+@startuml process_flow
+!theme plain
+title Wiki Publisher - Processing Flow
+
+skinparam backgroundColor #FAFAFA
+skinparam activityBackgroundColor #E8F4F8
+skinparam activityBorderColor #0066CC
+skinparam arrowColor #333333
+
+start
+
+:Load Configuration;
+
+:Initialize Publisher
+  - Create Parser (AntoraParser)
+  - Create ConfluenceClient;
+
+:For each configured Space Mapper;
+
+:Parse Source Documentation
+  - Read index.html
+  - Extract page hierarchy;
+
+:Resolve Pages
+  - Create Page tree structure
+  - Load page source paths;
+
+:Log Page Hierarchy;
+
+:For each Page (recursively);
+
+:Get or Create Page in Confluence
+  - Check if exists
+  - Create if not found;
+
+:Load Page Content;
+
+:Transform Content
+  - Parse HTML
+  - Convert to Confluence storage format
+  - Extract attachments;
+
+:Update Page Body
+  - Apply transformation
+  - Set page properties;
+
+:Upload Attachments
+  - For each attachment
+  - Upload to Confluence;
+
+:Process Child Pages (recursive);
+
+:End of page processing;
+
+:Next mapper;
+
+:End of publisher;
+
+:Handle Errors
+  - Log failures
+  - Continue with next mapper;
+
+stop
+
+@enduml

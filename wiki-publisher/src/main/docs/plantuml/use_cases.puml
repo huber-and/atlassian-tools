@@ -1,0 +1,49 @@
+@startuml use_cases
+!theme plain
+title Wiki Publisher - Use Cases
+
+skinparam usecaseBackgroundColor #E8F4F8
+skinparam actorBackgroundColor #F0E8F8
+skinparam arrowColor #333333
+
+actor User
+
+rectangle "Wiki Publisher System" {
+  usecase "Configure Publisher" as UC1
+  usecase "Parse Documentation" as UC2
+  usecase "Transform Content" as UC3
+  usecase "Connect to Confluence" as UC4
+  usecase "Create Pages" as UC5
+  usecase "Update Pages" as UC6
+  usecase "Upload Attachments" as UC7
+  usecase "Publish to Space" as UC8
+  usecase "Set Page Properties" as UC9
+  usecase "Handle Errors" as UC10
+}
+
+User --> UC1: Provides config\n(URL, credentials, mappers)
+UC1 --> UC8: Triggers
+
+UC8 --> UC2: Extract pages
+UC8 --> UC4: Establish connection
+UC4 --> UC5: Create pages
+UC4 --> UC6: Update pages
+
+UC2 --> UC3: Convert HTML
+UC3 --> UC6: Apply transformations
+UC3 --> UC7: Extract attachments
+
+UC6 --> UC9: Configure appearance
+UC7 --> UC8: Add to pages
+UC9 --> UC8: Complete publication
+
+UC8 ..> UC10: On error
+UC1 ..> UC10: On error
+UC2 ..> UC10: On error
+UC3 ..> UC10: On error
+UC4 ..> UC10: On error
+UC5 ..> UC10: On error
+UC6 ..> UC10: On error
+UC7 ..> UC10: On error
+
+@enduml

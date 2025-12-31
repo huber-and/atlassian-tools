@@ -1,0 +1,118 @@
+@startuml class_diagram
+!theme plain
+title Wiki Publisher - Class Diagram
+
+skinparam classBackgroundColor #E8F4F8
+skinparam classBorderColor #0066CC
+skinparam arrowColor #333333
+
+class Publisher {
+  -config: Configuration
+  -client: ConfluenceClient
+  -parser: Parser
+  +Publisher(config: Configuration)
+  +publish(): void
+  #publish(mapper: Mapper): void
+  -dump(page: Page, depth: int): void
+}
+
+class Configuration {
+  -url: String
+  -username: String
+  -password: String
+  -debug: boolean
+  -mappers: Set<Mapper>
+}
+
+class Configuration.Mapper {
+  -spaceKey: String
+  -root: String
+  -path: String
+}
+
+class ConfluenceClient {
+  -config: Configuration
+  -clientV1: ApiClient
+  -clientV2: ApiClient
+  -attachmentsApi: ContentAttachmentsApi
+  -propertiesApi: ContentPropertiesApi
+  -spaceApi: SpaceApi
+  -pageApi: PageApi
+  -parser: Parser
+  -transformer: Transformer
+  +ConfluenceClient(config, parser, transformer)
+  +updatePages(mapper: Mapper, pages: List<Page>): void
+  #createOrUpdatePage(page, parentId, spaceId, list): PageBulk
+  -getOrCreatePage(...): PageBulk
+  -updateBody(...): void
+  -createOrUpdateAttachment(...): void
+}
+
+interface Parser {
+  +resolvePages(root: Path): List<Page>
+  +loadContent(page: Page): Element
+}
+
+class AntoraParser {
+  -config: Configuration
+  +AntoraParser(config: Configuration)
+  +resolvePages(root: Path): List<Page>
+  +loadContent(page: Page): Element
+  -load(file: Path): Document
+}
+
+interface Transformer {
+  +transform(page: Page, content: Element): Result
+}
+
+class ConfluenceTransformer {
+  +transform(page: Page, content: Element): Result
+}
+
+class Transformer.Result {
+  -content: String
+  -attachments: List<Attachment>
+  +add(attachment: Attachment): void
+}
+
+class Page {
+  -title: String
+  -source: Path
+  -parent: Page
+  -children: List<Page>
+  +Page(title, source, parent)
+  +equals(obj): boolean
+  +hashCode(): int
+  +toString(): String
+}
+
+class Attachment {
+  -fileName: String
+  -source: Path
+}
+
+Publisher --> Configuration: uses
+Publisher --> Parser: uses
+Publisher --> ConfluenceClient: creates
+Configuration --> Configuration.Mapper: contains
+
+ConfluenceClient --> Configuration: uses
+ConfluenceClient --> Parser: uses
+ConfluenceClient --> Transformer: uses
+ConfluenceClient --> Page: processes
+ConfluenceClient --> Attachment: processes
+
+Parser <|.. AntoraParser: implements
+AntoraParser --> Page: creates
+AntoraParser --> Configuration: uses
+
+Transformer <|.. ConfluenceTransformer: implements
+Transformer --> Transformer.Result: returns
+ConfluenceTransformer --> Transformer.Result: returns
+
+Transformer.Result --> Attachment: contains
+
+Page --> Page: parent-children
+Page --> Attachment: may contain
+
+@enduml
