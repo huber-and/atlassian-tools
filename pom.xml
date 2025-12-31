@@ -75,7 +75,7 @@
 				<configuration>
 					<failOnError>false</failOnError>
 				</configuration>
-				
+
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -138,6 +138,16 @@
 					</execution>
 				</executions>
 			</plugin>
+			<plugin>
+				<groupId>org.sonatype.central</groupId>
+				<artifactId>central-publishing-maven-plugin</artifactId>
+				<version>0.9.0</version>
+				<extensions>true</extensions>
+				<configuration>
+					<publishingServerId>central</publishingServerId>
+					<autoPublish>true</autoPublish>
+				</configuration>
+			</plugin>
 		</plugins>
 		<pluginManagement>
 			<plugins>
@@ -163,18 +173,8 @@
 		<module>wiki-client</module>
 		<module>wiki-publisher</module>
 		<module>maven-plugin</module>
-		<module>arc42-sample</module>
 	</modules>
-	<distributionManagement>
-		<snapshotRepository>
-			<id>snapshots</id>
-			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
-		</snapshotRepository>
-		<repository>
-			<id>maven</id>
-			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-		</repository>
-	</distributionManagement>
+
 	<profiles>
 		<profile>
 			<id>release</id>
