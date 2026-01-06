@@ -26,6 +26,7 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.settings.Server;
 
 import io.github.huber_and.atlassian.wiki.Configuration;
 import io.github.huber_and.atlassian.wiki.Publisher;
@@ -33,14 +34,16 @@ import io.github.huber_and.atlassian.wiki.Publisher;
 /**
  * Maven Mojo for publishing pages to Confluence.
  *
- * This Mojo integrates Confluence page publishing into the Maven build lifecycle,
- * allowing documentation to be published to Confluence as part of the build process.
+ * This Mojo integrates Confluence page publishing into the Maven build
+ * lifecycle, allowing documentation to be published to Confluence as part of
+ * the build process.
  *
- * The Mojo can be configured with credentials directly or by using Maven server configuration.
- * If no username is provided, it will attempt to retrieve credentials from the Maven settings
- * for the host specified in the URL.
+ * The Mojo can be configured with credentials directly or by using Maven server
+ * configuration. If no username is provided, it will attempt to retrieve
+ * credentials from the Maven settings for the host specified in the URL.
  *
  * Usage in pom.xml:
+ *
  * <pre>
  * &lt;plugin&gt;
  *   &lt;groupId&gt;com.github.huber-and.atlassian&lt;/groupId&gt;
@@ -62,11 +65,24 @@ import io.github.huber_and.atlassian.wiki.Publisher;
 @Mojo(name = "publish", defaultPhase = LifecyclePhase.NONE)
 public class PagePublisherMojo extends AbstractMojo {
 
-	/** The base URL of the Confluence instance (e.g., https://confluence.example.com). */
+	/**
+	 * The base URL of the Confluence instance (e.g.,
+	 * https://confluence.example.com).
+	 */
 	@Parameter(property = "url", required = true)
 	private String url;
 
-	/** The username for authentication. If not provided, will use Maven server configuration. */
+	/**
+	 * The server ID for Maven server configuration. If not provided, will use the
+	 * host of url.
+	 */
+	@Parameter(property = "serverId")
+	private String serverId;
+
+	/**
+	 * The username for authentication. If not provided, will use Maven server
+	 * configuration.
+	 */
 	@Parameter(property = "username")
 	private String username;
 
@@ -85,10 +101,11 @@ public class PagePublisherMojo extends AbstractMojo {
 	/**
 	 * Executes the Maven Mojo to publish pages to Confluence.
 	 *
-	 * Builds the configuration from parameters and Maven settings, then runs the publisher.
+	 * Builds the configuration from parameters and Maven settings, then runs the
+	 * publisher.
 	 *
 	 * @throws MojoExecutionException if an error occurs during execution
-	 * @throws MojoFailureException if the publication fails
+	 * @throws MojoFailureException   if the publication fails
 	 */
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
@@ -98,7 +115,7 @@ public class PagePublisherMojo extends AbstractMojo {
 		config.setUrl(url);
 		config.setMappers(mappers);
 		if (StringUtils.isBlank(username)) {
-			final var server = session.getSettings().getServer(uri.getHost());
+			final var server = resolveServer(uri);
 			if (server != null) {
 				config.setUsername(server.getUsername());
 				config.setPassword(server.getPassword());
@@ -112,4 +129,11 @@ public class PagePublisherMojo extends AbstractMojo {
 
 	}
 
+	private Server resolveServer(final URI uri) {
+		var id = serverId;
+		if (StringUtils.isBlank(serverId)) {
+			id = uri.getHost();
+		}
+		return session.getSettings().getServer(id);
+	}
 }
