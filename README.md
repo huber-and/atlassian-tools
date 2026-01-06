@@ -1,106 +1,112 @@
 # Atlassian Tools
 
-A comprehensive suite of Java tools and libraries for integrating with Atlassian Confluence, including a REST API client, HTML publishing utility, and Maven plugin.
+A comprehensive suite of Java tools and libraries designed to streamline integration with Atlassian Confluence. This project provides a robust REST API client, a powerful HTML publishing utility, and a Maven plugin to automate your documentation workflow.
 
-## Project Structure
+## Project Modules
 
-This is a multi-module Maven project containing:
+This multi-module Maven project consists of the following components:
 
-### 1. **wiki-client** - Confluence REST API Client
-A generated Java client library for the Confluence REST API v2, built with OpenAPI Generator.
-- **Description**: Confluence REST API wrapper
+### 1. `wiki-client`
+**Confluence REST API Client**
+A strongly-typed, auto-generated Java client for the Confluence Cloud REST API (v2).
 - **Package**: `net.atlassian.wiki.rest`
-- **Key Dependencies**: Apache HttpClient 5, Jackson, Swagger Annotations
 - **Features**:
-  - Auto-generated from OpenAPI specification (ConfluenceV2.json)
-  - RESTful API client for Confluence operations
-  - Full Java 21 compatibility
-  - Uses Jakarta EE annotations
+  - Full coverage of Confluence V2 API.
+  - Specialized support for attachment management (V1 API).
+  - Built with **Java 21** and **Jakarta EE**.
+  - Powered by **Apache HttpClient 5**.
 
-### 2. **wiki-publisher** - HTML to Confluence Publisher
-Utility library for parsing HTML files and publishing them to Confluence in Confluence Storage Format.
-- **Description**: Helper to parse HTML files and upload to Confluence
-- **Key Dependencies**: wiki-client, jsoup, Jackson
+### 2. `wiki-publisher`
+**HTML to Confluence Publisher**
+A utility library that parses local documentation (HTML/Antora) and publishes it to Confluence.
 - **Features**:
-  - HTML parsing and conversion
-  - Confluence Storage Format support
-  - Direct dependency on wiki-client for API operations
+  - Parses HTML structures (optimized for Antora).
+  - Transforms content into Confluence Storage Format.
+  - Preserves page hierarchy and structure.
+  - Handles attachments and images.
 
-### 3. **atlassian-maven-plugin** - Maven Integration Plugin
-A Maven plugin that integrates the wiki-publisher functionality into the Maven build lifecycle.
-- **Description**: Atlassian tools Maven plugin
-- **Package Name**: `atlassian-maven-plugin`
-- **Key Dependencies**: Maven Plugin API, wiki-publisher
+### 3. `atlassian-maven-plugin`
+**Maven Integration**
+A Maven plugin that brings the power of the `wiki-publisher` directly into your build lifecycle.
+- **Goal**: `atlassian:publish`
 - **Features**:
-  - Maven mojo implementations for automating Confluence operations
-  - Integration with Maven build process
-  - Auto-generated help mojo
+  - Automate documentation publishing as part of `mvn site` or `mvn deploy`.
+  - Flexible configuration for mapping local directories to Confluence spaces.
+  - Secure credential management via Maven `settings.xml`.
 
-### 4. **arc42-sample** - Sample Project
-A sample project demonstrating the usage of the Atlassian tools.
+### 4. `arc42-sample`
+A sample project demonstrating how to use the `atlassian-maven-plugin` with an [arc42](https://arc42.org/) documentation template.
 
 ## Requirements
 
-- **Java**: 21+
-- **Maven**: 3.6+
+- **Java**: JDK 21 or later
+- **Maven**: 3.9 or later
 
-## Building
+## Installation & Usage
 
-Build the entire project:
+All artifacts are available via Maven.
+
+### Using the Client Library
+
+Add the dependency to your project:
+
+```xml
+<dependency>
+    <groupId>io.github.huber-and.atlassian</groupId>
+    <artifactId>wiki-client</artifactId>
+    <version>${atlassian-tools.version}</version>
+</dependency>
+```
+
+### Using the Publisher Library
+
+```xml
+<dependency>
+    <groupId>io.github.huber-and.atlassian</groupId>
+    <artifactId>wiki-publisher</artifactId>
+    <version>${atlassian-tools.version}</version>
+</dependency>
+```
+
+### Using the Maven Plugin
+
+Configure the plugin in your `pom.xml`:
+
+```xml
+<build>
+    <plugins>
+        <plugin>
+            <groupId>io.github.huber-and.atlassian</groupId>
+            <artifactId>atlassian-maven-plugin</artifactId>
+            <version>${atlassian-tools.version}</version>
+            <configuration>
+                <url>https://your-domain.atlassian.net/wiki</url>
+                <mappers>
+                    <mapper>
+                        <spaceKey>DOCS</spaceKey>
+                        <path>src/docs/site</path>
+                    </mapper>
+                </mappers>
+            </configuration>
+        </plugin>
+    </plugins>
+</build>
+```
+
+## Building from Source
+
+To build the entire project locally:
 
 ```bash
 mvn clean install
 ```
 
-Build a specific module:
+To build a specific module:
 
 ```bash
 mvn -pl wiki-client clean install
-mvn -pl wiki-publisher clean install
-mvn -pl atlassian-maven-plugin clean install
 ```
-
-## Usage
-
-### As a Library (wiki-client or wiki-publisher)
-
-Add the dependency to your `pom.xml`:
-
-```xml
-<!-- For REST API client -->
-<dependency>
-    <groupId>com.github.huber-and.atlassian</groupId>
-    <artifactId>wiki-client</artifactId>
-    <version>0.1-SNAPSHOT</version>
-</dependency>
-
-<!-- For HTML publishing -->
-<dependency>
-    <groupId>com.github.huber-and.atlassian</groupId>
-    <artifactId>wiki-publisher</artifactId>
-    <version>0.1-SNAPSHOT</version>
-</dependency>
-```
-
-### As a Maven Plugin
-
-Add the plugin to your `pom.xml`:
-
-```xml
-<plugin>
-    <groupId>com.github.huber-and.atlassian</groupId>
-    <artifactId>atlassian-maven-plugin</artifactId>
-    <version>0.1-SNAPSHOT</version>
-    <!-- Configuration here -->
-</plugin>
-```
-
-## References
-
-- [Confluence REST API Documentation](https://developer.atlassian.com/cloud/confluence/rest/v2/)
-- [Confluence Storage Format](https://confluence.atlassian.com/doc/confluence-storage-format-790796544.html)
-- [OpenAPI Generator](https://openapi-generator.tech/)
 
 ## License
 
-See LICENSE file for details.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
