@@ -28,15 +28,14 @@ import org.jsoup.nodes.Entities;
 
 import io.github.huber_and.atlassian.wiki.Configuration;
 import io.github.huber_and.atlassian.wiki.Page;
-
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * Parser for Antora-based documentation.
  *
- * This parser is specifically designed to handle Antora-generated documentation,
- * extracting page hierarchies from the Antora HTML structure by parsing navigation menus
- * and source files.
+ * This parser is specifically designed to handle Antora-generated
+ * documentation, extracting page hierarchies from the Antora HTML structure by
+ * parsing navigation menus and source files.
  *
  * @author Andreas Huber
  */
@@ -78,25 +77,30 @@ public class AntoraParser implements Parser {
 		final var path = new Page[10];
 		final List<Page> roots = new ArrayList<>();
 
-		for (final Element child : menu.getElementsByTag("a")) {
-			if (!child.parent().hasAttr("data-depth")) {
+		for (final Element child : menu.getElementsByClass("nav-item")) {
+			if (!child.hasAttr("data-depth")) {
 				continue;
 			}
-			final var depth = Integer.parseInt(child.parent().attr("data-depth"));
-			final var href = child.attr("href");
+			final var depth = Integer.parseInt(child.attr("data-depth"));
+			if (depth <= 0) {
+				continue;
+			}
+			final var element = child.selectFirst("a, span");
+			final var href = element.attr("href");
 			Path source = null;
 			if (StringUtils.isNotBlank(href)) {
 				source = root.resolve(href);
 			}
-			final var item = new Page(child.text(), source, path[depth - 1]);
+			final var item = new Page(element.text(), source, path[depth - 1]);
 			path[depth] = item;
 			if (item.getParent() == null) {
 				roots.add(item);
 			}
-			log.info("NavItem {}", item);
+			log.info("NavItem {}, link {}", item, item.getSource());
 
 		}
 		return roots;
+
 	}
 
 	/**

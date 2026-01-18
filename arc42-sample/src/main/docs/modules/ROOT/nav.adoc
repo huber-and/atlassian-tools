@@ -6,7 +6,8 @@
 * xref:06_runtime_view.adoc[]
 * xref:07_deployment_view.adoc[]
 * xref:08_concepts.adoc[]
-** xref:08_01_sample_code.adoc[]
+** 8.1 Samples
+*** xref:08_01_sample_code.adoc[]
 * xref:09_architecture_decisions.adoc[]
 * xref:10_quality_requirements.adoc[]
 * xref:11_technical_risks.adoc[]

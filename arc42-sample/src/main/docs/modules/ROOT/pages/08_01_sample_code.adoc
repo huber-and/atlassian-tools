@@ -1,7 +1,7 @@
 ifndef::imagesdir[:imagesdir: ../images]
 
 [[section-concepts]]
-= 8.1 Sample Code Block
+= 8.1.1 Sample Code Block
 
 
 [source,java]

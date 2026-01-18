@@ -71,19 +71,21 @@
 				<artifactId>atlassian-maven-plugin</artifactId>
 				<version>${revision}${changelist}</version>
 				<configuration>
-					<url>${wiki.url}</url>
-					<serverId>${wiki.serverId}</serverId>
+					<url>${private.wiki.url}</url>
+					<serverId>${private.wiki.serverId}</serverId>
 					<mappers>
 						<mapper>
 							<spaceKey>arc42sample</spaceKey>
 							<root>Architecture</root>
 							<path>${project.basedir}/target/docs/docs/main</path>
 						</mapper>
+<!--
 						<mapper>
 							<spaceKey>arc42sample1</spaceKey>
 							<root>Architecture</root>
 							<path>${project.basedir}/target/docs/docs/main</path>
 						</mapper>
+-->
 					</mappers>
 				</configuration>
 			</plugin>
