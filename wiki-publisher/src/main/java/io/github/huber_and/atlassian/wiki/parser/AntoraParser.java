@@ -91,12 +91,12 @@ public class AntoraParser implements Parser {
 			if (StringUtils.isNotBlank(href)) {
 				source = root.resolve(href);
 			}
-			final var item = new Page(element.text(), source, path[depth - 1]);
+			final var item = new Page(element.text().trim(), source, path[depth - 1]);
 			path[depth] = item;
 			if (item.getParent() == null) {
 				roots.add(item);
 			}
-			log.info("NavItem {}, link {}", item, item.getSource());
+			log.debug("NavItem {}, link {}", item, item.getSource());
 
 		}
 		return roots;
