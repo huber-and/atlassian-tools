@@ -16,6 +16,7 @@
 package io.github.huber_and.atlassian.wiki;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -23,15 +24,12 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.Strings;
 
 import io.github.huber_and.atlassian.wiki.Configuration.Mapper;
 import io.github.huber_and.atlassian.wiki.parser.Parser;
 import io.github.huber_and.atlassian.wiki.transformer.Transformer;
-
 import lombok.extern.slf4j.Slf4j;
 import net.atlassian.wiki.rest.ApiClient;
-import net.atlassian.wiki.rest.ApiException;
 import net.atlassian.wiki.rest.ServerConfiguration;
 import net.atlassian.wiki.rest.v1.api.ContentAttachmentsApi;
 import net.atlassian.wiki.rest.v2.api.ContentPropertiesApi;
@@ -47,9 +45,10 @@ import net.atlassian.wiki.rest.v2.model.UpdatePageRequestVersion;
 /**
  * Client for publishing content to Confluence.
  *
- * This class manages the interaction with the Confluence REST API, handling the creation,
- * update, and publishing of pages and attachments to a Confluence instance. It coordinates
- * with parsers and transformers to convert source content into Confluence storage format.
+ * This class manages the interaction with the Confluence REST API, handling the
+ * creation, update, and publishing of pages and attachments to a Confluence
+ * instance. It coordinates with parsers and transformers to convert source
+ * content into Confluence storage format.
  *
  * @author Andreas Huber
  */
@@ -86,8 +85,8 @@ public class ConfluenceClient {
 	/**
 	 * Constructs a ConfluenceClient with the given configuration and converters.
 	 *
-	 * @param config the Confluence configuration
-	 * @param parser the content parser
+	 * @param config      the Confluence configuration
+	 * @param parser      the content parser
 	 * @param transformer the content transformer
 	 */
 	public ConfluenceClient(final Configuration config, final Parser parser, final Transformer transformer) {
@@ -116,23 +115,24 @@ public class ConfluenceClient {
 	/**
 	 * Updates or creates the given list of pages in the specified Confluence space.
 	 *
-	 * If a root page is configured, all pages are created under it. Otherwise, they are
-	 * created at the space root level. Each page and its children are recursively processed.
+	 * If a root page is configured, all pages are created under it. Otherwise, they
+	 * are created at the space root level. Each page and its children are
+	 * recursively processed.
 	 *
 	 * @param mapper the space mapper defining the target space and configuration
-	 * @param pages the list of pages to update or create
+	 * @param pages  the list of pages to update or create
 	 * @throws Exception if an error occurs during the update operation
 	 */
 	public void updatePages(final Mapper mapper, final List<Page> pages) throws Exception {
 		var spaceId = mapper.getSpaceKey();
-		List<PageBulk> list = Collections.emptyList();
+		final List<PageBulk> list = new ArrayList<>();
 		if (!config.isDebug()) {
-			final var space = spaceApi
-					.getSpaces(null, List.of(spaceId), null, null, null, null, null, null, null, null, null, null)
-					.getResults().getFirst();
+			final List<String> keys = List.of(spaceId);
+			final var space = Utils.retry(
+					() -> spaceApi.getSpaces(null, keys, null, null, null, null, null, null, null, null, null, null)
+							.getResults().getFirst(),
+					1);
 			spaceId = space.getId();
-			list = pageApi.getPagesInSpace(Long.parseLong(space.getId()), "all", null, List.of("current"), null, null,
-					null, null).getResults().stream().toList();
 		}
 		PageBulk root = null;
 		if (StringUtils.isNotBlank(mapper.getRoot())) {
@@ -147,10 +147,10 @@ public class ConfluenceClient {
 	/**
 	 * Creates or updates a page in Confluence with its content and attachments.
 	 *
-	 * @param page the page to create or update
+	 * @param page     the page to create or update
 	 * @param parentId the parent page ID, or null if at root level
-	 * @param spaceId the target space ID
-	 * @param list existing pages in the space for lookup
+	 * @param spaceId  the target space ID
+	 * @param list     existing pages in the space for lookup
 	 * @return the created or updated page
 	 * @throws Exception if an error occurs during the operation
 	 */
@@ -174,32 +174,32 @@ public class ConfluenceClient {
 	private PageBulk getOrCreatePage(final Page page, final String parentId, final String spaceId,
 			final List<PageBulk> list) throws Exception {
 		final var title = page.getTitle();
-		final var result = list.stream().filter(r -> Strings.CS.equals(page.getTitle(), r.getTitle())).findFirst();
+		var remote = Utils.retry(() -> pageApi
+				.getPagesInSpace(Long.parseLong(spaceId), "all", null, List.of("current"), title, null, null, 1)
+				.getResults().stream().findFirst().orElse(null), 1);
 
-		PageBulk remote = null;
-		if (result.isPresent()) {
-			remote = result.get();
-			log.info("Root Page {} with id {} found", title, remote.getId());
-		} else {
-			String pageId;
-			if (!config.isDebug()) {
-				final var response = pageApi.createPage(CreatePageRequest.builder().parentId(parentId).spaceId(spaceId)
-						.title(title)
-						.body(CreatePageRequestBody.builder().value(page.getTitle())
-								.representation(CreatePageRequestBody.RepresentationEnum.STORAGE).build())
-						.build(), null, null, null);
-				remote = new PageBulk().id(response.getId()).title(response.getTitle()).spaceId(response.getSpaceId())
-						.parentId(response.getSpaceId()).version(response.getVersion());
-			} else {
-				pageId = UUID.randomUUID().toString();
-				remote = new PageBulk();
-				remote.setId(pageId);
-				remote.setSpaceId(spaceId);
-				remote.setParentId(pageId);
-
-			}
-			log.info(" Page {} created with id {}", title, remote.getId());
+		if (remote != null) {
+			log.info("Page {} with id {} found", title, remote.getId());
+			return remote;
 		}
+		if (!config.isDebug()) {
+			final var response = Utils.retry(() -> pageApi.createPage(
+					CreatePageRequest.builder().parentId(parentId).spaceId(spaceId).title(title)
+							.body(CreatePageRequestBody.builder().value(page.getTitle())
+									.representation(CreatePageRequestBody.RepresentationEnum.STORAGE).build())
+							.build(),
+					null, null, null), 1);
+			remote = new PageBulk().id(response.getId()).title(response.getTitle()).spaceId(response.getSpaceId())
+					.parentId(response.getSpaceId()).version(response.getVersion());
+		} else {
+			final var pageId = UUID.randomUUID().toString();
+			remote = new PageBulk();
+			remote.setId(pageId);
+			remote.setSpaceId(spaceId);
+			remote.setParentId(pageId);
+
+		}
+		log.info(" Page {} created with id {}", title, remote.getId());
 		return remote;
 	}
 
@@ -217,7 +217,7 @@ public class ConfluenceClient {
 					.body(CreatePageRequestBody.builder()
 							.representation(CreatePageRequestBody.RepresentationEnum.STORAGE).value(body).build())
 					.build();
-			pageApi.updatePage(Long.parseLong(remote.getId()), request);
+			Utils.retry(() -> pageApi.updatePage(Long.parseLong(remote.getId()), request), 1);
 			final var properties = propertiesApi.getPageContentProperties(Long.parseLong(remote.getId()), null, null,
 					null, null);
 			final Map<String, Object> list = new HashMap<>();
@@ -227,8 +227,10 @@ public class ConfluenceClient {
 						.key("content-appearance-draft").value("full-width").build());
 			}
 			if (!list.containsKey("content-appearance-published")) {
-				propertiesApi.createPageProperty(Long.parseLong(remote.getId()), ContentPropertyCreateRequest.builder()
-						.key("content-appearance-published").value("full-width").build());
+				Utils.retry(() -> propertiesApi.createPageProperty(Long.parseLong(remote.getId()),
+						ContentPropertyCreateRequest.builder().key("content-appearance-published").value("full-width")
+								.build()),
+						1);
 			}
 		} catch (final Exception e) {
 			log.warn("Failed to update page body for {}", page.getTitle(), e);
@@ -242,9 +244,12 @@ public class ConfluenceClient {
 			return;
 		}
 		try {
-			attachmentsApi.createOrUpdateAttachments(contentId, attachment.getSource().toFile(), "binary", "current",
-					null);
-		} catch (final ApiException e) {
+			Utils.retry(() -> {
+				attachmentsApi.createOrUpdateAttachments(contentId, attachment.getSource().toFile(), "binary",
+						"current", null);
+				return null;
+			}, 1);
+		} catch (final Exception e) {
 			log.error("Failed to upload attachment {} to {}", attachment.getFileName(), contentId, e);
 		}
 	}
