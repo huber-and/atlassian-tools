@@ -15,10 +15,14 @@
  */
 package io.github.huber_and.atlassian.wiki;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -36,6 +40,8 @@ import net.atlassian.wiki.rest.v2.api.ContentPropertiesApi;
 import net.atlassian.wiki.rest.v2.api.PageApi;
 import net.atlassian.wiki.rest.v2.api.SpaceApi;
 import net.atlassian.wiki.rest.v2.model.ContentPropertyCreateRequest;
+import net.atlassian.wiki.rest.v2.model.ContentPropertyUpdateRequest;
+import net.atlassian.wiki.rest.v2.model.ContentPropertyUpdateRequestVersion;
 import net.atlassian.wiki.rest.v2.model.CreatePageRequest;
 import net.atlassian.wiki.rest.v2.model.CreatePageRequestBody;
 import net.atlassian.wiki.rest.v2.model.PageBulk;
@@ -54,6 +60,13 @@ import net.atlassian.wiki.rest.v2.model.UpdatePageRequestVersion;
  */
 @Slf4j
 public class ConfluenceClient {
+	/**
+	 * Constant for the Confluence page property key used to store the content hash.
+	 *
+	 * This property is written after every successful page update and is read
+	 * before the next update to determine whether the content has actually changed.
+	 */
+	public static final String PROPERTY_KEY_CONTENT_HASH = "page-content-hash";
 
 	/** Configuration containing Confluence credentials and settings. */
 	private final Configuration config;
@@ -161,8 +174,11 @@ public class ConfluenceClient {
 		if (page.getSource() != null) {
 			final var content = parser.loadContent(page);
 			final var result = transformer.transform(page, content);
-			updateBody(page, remote, result.getContent());
-			result.getAttachments().forEach(a -> createOrUpdateAttachment(remote.getId(), a));
+			final var contentHash = computeHash(result.getContent());
+			final var updated = updateBody(page, remote, result.getContent(), contentHash);
+			if (updated) {
+				result.getAttachments().forEach(a -> createOrUpdateAttachment(remote.getId(), a));
+			}
 		}
 		for (final Page child : page.getChildren()) {
 			createOrUpdatePage(child, remote.getId(), spaceId, list);
@@ -203,11 +219,42 @@ public class ConfluenceClient {
 		return remote;
 	}
 
-	private void updateBody(final Page page, final PageBulk remote, final String body) throws Exception {
+	/**
+	 * Updates the body of a Confluence page if the content has changed.
+	 *
+	 * Computes a SHA-256 hash of the transformed content and compares it with the
+	 * hash stored as a Confluence page property. If the hashes are identical the
+	 * update is skipped entirely (no API call, no attachment upload). Otherwise the
+	 * page body is updated and the stored hash property is created or updated.
+	 *
+	 * @param page        the page being published
+	 * @param remote      the existing Confluence page
+	 * @param body        the transformed Confluence Storage Format content
+	 * @param contentHash the SHA-256 hex hash of {@code body}
+	 * @return {@code true} if the page was updated, {@code false} if it was skipped
+	 * @throws Exception if an API call fails
+	 */
+	private boolean updateBody(final Page page, final PageBulk remote, final String body, final String contentHash)
+			throws Exception {
 		if (config.isDebug()) {
-			return;
+			return false;
 		}
 		try {
+			final var pageId = Long.parseLong(remote.getId());
+
+			// Load existing properties before deciding whether to update.
+			final var properties = Utils
+					.retry(() -> propertiesApi.getPageContentProperties(pageId, null, null, null, null), 1);
+			final Map<String, net.atlassian.wiki.rest.v2.model.ContentProperty> propMap = new HashMap<>();
+			properties.getResults().forEach(p -> propMap.put(p.getKey(), p));
+
+			// Skip update when the content hash matches the stored one.
+			final var storedHashProp = propMap.get(PROPERTY_KEY_CONTENT_HASH);
+			if (storedHashProp != null && contentHash.equals(storedHashProp.getValue())) {
+				log.info("Page {} is up-to-date, skipping update", page.getTitle());
+				return false;
+			}
+
 			var version = (int) remote.getVersion().getNumber();
 			version++;
 
@@ -217,26 +264,56 @@ public class ConfluenceClient {
 					.body(CreatePageRequestBody.builder()
 							.representation(CreatePageRequestBody.RepresentationEnum.STORAGE).value(body).build())
 					.build();
-			Utils.retry(() -> pageApi.updatePage(Long.parseLong(remote.getId()), request), 1);
-			final var properties = propertiesApi.getPageContentProperties(Long.parseLong(remote.getId()), null, null,
-					null, null);
-			final Map<String, Object> list = new HashMap<>();
-			properties.getResults().forEach(p -> list.put(p.getKey(), p));
-			if (!list.containsKey("content-appearance-draft")) {
-				propertiesApi.createPageProperty(Long.parseLong(remote.getId()), ContentPropertyCreateRequest.builder()
-						.key("content-appearance-draft").value("full-width").build());
+			Utils.retry(() -> pageApi.updatePage(pageId, request), 1);
+
+			if (!propMap.containsKey("content-appearance-draft")) {
+				Utils.retry(() -> propertiesApi.createPageProperty(pageId, ContentPropertyCreateRequest.builder()
+						.key("content-appearance-draft").value("full-width").build()), 1);
 			}
-			if (!list.containsKey("content-appearance-published")) {
-				Utils.retry(() -> propertiesApi.createPageProperty(Long.parseLong(remote.getId()),
-						ContentPropertyCreateRequest.builder().key("content-appearance-published").value("full-width")
+			if (!propMap.containsKey("content-appearance-published")) {
+				Utils.retry(() -> propertiesApi.createPageProperty(pageId, ContentPropertyCreateRequest.builder()
+						.key("content-appearance-published").value("full-width").build()), 1);
+			}
+
+			// Persist the new content hash so subsequent runs can skip unchanged pages.
+			if (storedHashProp == null) {
+				Utils.retry(() -> propertiesApi.createPageProperty(pageId, ContentPropertyCreateRequest.builder()
+						.key(PROPERTY_KEY_CONTENT_HASH).value(contentHash).build()), 1);
+			} else {
+				final var propId = Long.parseLong(storedHashProp.getId());
+				final var nextPropVersion = storedHashProp.getVersion().getNumber() + 1;
+				Utils.retry(() -> propertiesApi.updatePagePropertyById(pageId, propId,
+						ContentPropertyUpdateRequest.builder().key(PROPERTY_KEY_CONTENT_HASH).value(contentHash)
+								.version(ContentPropertyUpdateRequestVersion.builder().number(nextPropVersion).build())
 								.build()),
 						1);
 			}
+			return true;
 		} catch (final Exception e) {
 			log.warn("Failed to update page body for {}", page.getTitle(), e);
 			throw e;
 		}
 
+	}
+
+	/**
+	 * Computes a SHA-256 hash of the given string content.
+	 *
+	 * The hash is used to determine whether the transformed page content has
+	 * changed since the last publish run. Identical input always produces the same
+	 * hex string.
+	 *
+	 * @param content the content to hash
+	 * @return the SHA-256 hash as a lowercase hex string
+	 */
+	static String computeHash(final String content) {
+		try {
+			final var digest = MessageDigest.getInstance("SHA-256");
+			final var hash = digest.digest(content.getBytes(StandardCharsets.UTF_8));
+			return HexFormat.of().formatHex(hash);
+		} catch (final NoSuchAlgorithmException e) {
+			throw new IllegalStateException("SHA-256 not available", e);
+		}
 	}
 
 	private void createOrUpdateAttachment(final String contentId, final Attachment attachment) {
