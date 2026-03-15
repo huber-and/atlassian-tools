@@ -39,4 +39,7 @@ See https://docs.arc42.org/section-12/[Glossary] in the arc42 documentation.
 
 |<Term-2>
 |<definition-2>
+
+|<Term-3>
+|<definition-3>
 |===
