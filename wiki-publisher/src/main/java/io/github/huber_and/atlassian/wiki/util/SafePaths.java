@@ -42,10 +42,27 @@ public final class SafePaths {
 			throw new IllegalArgumentException("userInput must not be null");
 		}
 		final Path candidate = root.resolve(userInput).normalize();
-		final Path normalizedRoot = root.normalize();
-		if (!candidate.startsWith(normalizedRoot)) {
+		if (!isWithin(root, candidate)) {
 			throw new IllegalArgumentException("Path escapes root: " + userInput);
 		}
 		return candidate;
+	}
+
+	/**
+	 * Tests whether {@code candidate} lies inside {@code root}.
+	 *
+	 * Used where the containment boundary is not a single directory — a link may
+	 * legitimately leave the directory of the page it appears on, as long as it
+	 * stays inside one of the configured mapper paths.
+	 *
+	 * @param root      the directory the candidate must be a descendant of
+	 * @param candidate the path to test
+	 * @return {@code true} if {@code candidate} is {@code root} or below it
+	 */
+	public static boolean isWithin(final Path root, final Path candidate) {
+		if (root == null || candidate == null) {
+			return false;
+		}
+		return candidate.normalize().startsWith(root.normalize());
 	}
 }

@@ -16,6 +16,7 @@
 package io.github.huber_and.atlassian.wiki.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -67,5 +68,28 @@ class SafePathsTest {
 	void allowsCurrentDirectoryReference() {
 		final var resolved = SafePaths.resolveWithin(root, "./page.html");
 		assertEquals(root.resolve("page.html").normalize(), resolved);
+	}
+
+	@Test
+	void isWithinAcceptsDescendantsAndTheRootItself() {
+		assertTrue(SafePaths.isWithin(root, root.resolve("sub/page.html")));
+		assertTrue(SafePaths.isWithin(root, root));
+	}
+
+	@Test
+	void isWithinRejectsSiblingsAndEscapes() {
+		assertFalse(SafePaths.isWithin(root, root.resolveSibling("other/page.html")));
+		assertFalse(SafePaths.isWithin(root, root.resolve("../outside.pdf")));
+	}
+
+	@Test
+	void isWithinNormalizesBeforeComparing() {
+		assertTrue(SafePaths.isWithin(root, root.resolve("sub/../page.html")));
+	}
+
+	@Test
+	void isWithinTreatsNullAsOutside() {
+		assertFalse(SafePaths.isWithin(root, null));
+		assertFalse(SafePaths.isWithin(null, root));
 	}
 }

@@ -16,6 +16,7 @@
 package io.github.huber_and.atlassian.wiki.transformer;
 
 import java.nio.file.Files;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -65,9 +66,41 @@ public class ConfluenceTransformer implements Transformer {
 			"sass", "scala", "shell", "sql", "swift", "tex", "text", "typescript", "vb", "xml", "yaml", "yml");
 
 	/**
+	 * Maps the five Asciidoctor admonition types onto the four Confluence
+	 * admonition macros, keeping the urgency levels visually distinct: informational
+	 * blue, advisory yellow, critical red.
+	 */
+	private static final Map<String, String> ADMONITION_MACROS = Map.of("note", "info", "tip", "tip", "important",
+			"warning", "warning", "warning", "caution", "note");
+
+	/** Resolves hrefs to Confluence link targets. */
+	private final LinkResolver resolver;
+
+	/**
+	 * Creates a transformer that cannot resolve internal links.
+	 *
+	 * Kept so embedders of the library that construct the transformer themselves
+	 * keep compiling; internal links are then reported as unresolved.
+	 */
+	public ConfluenceTransformer() {
+		this(LinkResolver.empty());
+	}
+
+	/**
+	 * Creates a transformer that resolves internal links through the given resolver.
+	 *
+	 * @param resolver the link index built for this publish run
+	 */
+	public ConfluenceTransformer(final LinkResolver resolver) {
+		this.resolver = resolver;
+	}
+
+	/**
 	 * Transforms page content to Confluence storage format.
 	 *
-	 * Removes the page title, transforms images and code blocks, and sanitizes the content.
+	 * Removes the page title, converts admonitions, anchors, links, images and code
+	 * blocks, and sanitizes the content. Code blocks come last because they freeze
+	 * their subtree by serializing it.
 	 *
 	 * @param page the page being transformed
 	 * @param content the HTML content to transform
@@ -81,10 +114,157 @@ public class ConfluenceTransformer implements Transformer {
 		if (title != null) {
 			title.remove();
 		}
+		transformAdmonitions(content);
+		transformAnchors(content);
+		transformLinks(page, content, result);
 		transformImages(page, content, result);
 		transformCodeBlocks(content);
 		result.setContent(sanitizeBody(content));
 		return result;
+	}
+
+	/**
+	 * Converts Asciidoctor admonition blocks into the matching Confluence macro.
+	 *
+	 * An admonition is a {@code div.admonitionblock TYPE} holding a table with an
+	 * icon and a content cell; the content may start with a {@code div.title}, which
+	 * becomes the macro title. An unknown type is left untouched rather than guessed
+	 * at.
+	 *
+	 * @param content the HTML content to scan
+	 */
+	private void transformAdmonitions(final Element content) {
+		content.select("div.admonitionblock").forEach(block -> {
+			final var type = block.classNames().stream().filter(c -> !"admonitionblock".equals(c)).findFirst()
+					.orElse("");
+			final var macroName = ADMONITION_MACROS.get(type.toLowerCase());
+			if (macroName == null) {
+				log.warn("Leaving admonition of unknown type '{}' unchanged", type);
+				return;
+			}
+			final var cell = block.selectFirst("td.content");
+			if (cell == null) {
+				log.warn("Admonition of type '{}' has no content cell, leaving it unchanged", type);
+				return;
+			}
+			final var macro = new Element("ac:structured-macro", "ac");
+			macro.attr("ac:name", macroName);
+			final var titleDiv = cell.selectFirst("div.title");
+			if (titleDiv != null) {
+				titleDiv.remove();
+				macro.appendElement("ac:parameter", "ac").attr("ac:name", "title").appendText(titleDiv.text());
+			}
+			final var body = macro.appendElement("ac:rich-text-body", "ac");
+			// Move the child nodes instead of serializing them, so the later steps still
+			// see links, images and code blocks inside the admonition.
+			cell.childNodes().stream().toList().forEach(body::appendChild);
+			block.replaceWith(macro);
+		});
+	}
+
+	/**
+	 * Emits an explicit Confluence anchor macro for every element carrying an id.
+	 *
+	 * Confluence anchors refer to heading texts or to anchor macros, never to HTML
+	 * ids, so Antora's generated ids such as {@code _requirements_overview} would
+	 * not be reachable otherwise. The id is dropped afterwards because it has no
+	 * function in Confluence.
+	 *
+	 * @param content the HTML content to scan
+	 */
+	private void transformAnchors(final Element content) {
+		content.select("[id]").forEach(element -> {
+			if (element == content) {
+				return;
+			}
+			final var id = element.attr("id");
+			if (StringUtils.isBlank(id)) {
+				return;
+			}
+			final var macro = new Element("ac:structured-macro", "ac");
+			macro.attr("ac:name", "anchor");
+			// The anchor macro takes its value as the unnamed default parameter,
+			// hence the deliberately empty ac:name.
+			macro.appendElement("ac:parameter", "ac").attr("ac:name", "").appendText(id);
+			element.before(macro);
+			element.removeAttr("id");
+		});
+	}
+
+	/**
+	 * Rewrites the links of a page to Confluence link elements.
+	 *
+	 * A textless anchor pointing at a pure fragment is Antora's empty section anchor.
+	 * Those are skipped so {@link #sanitizeBody(Element)} can keep removing them — the
+	 * anchor macros made them redundant, and converting them would leave empty link
+	 * shells behind that the removal no longer matches.
+	 *
+	 * @param page    the page being transformed
+	 * @param content the HTML content to scan
+	 * @param result  the transformation result to add attachments to
+	 */
+	private void transformLinks(final Page page, final Element content, final Result result) {
+		content.select("a[href]").forEach(link -> {
+			final var href = link.attr("href");
+			if (StringUtils.isBlank(link.text()) && href.startsWith("#")) {
+				return;
+			}
+			final var target = resolver.resolve(page.getSource(), href).orElse(null);
+			if (target == null) {
+				return;
+			}
+			switch (target.kind()) {
+			case PAGE -> link.replaceWith(pageLink(link.text(), target));
+			case ANCHOR -> link.replaceWith(anchorLink(link.text(), target.anchor()));
+			case ATTACHMENT -> link.replaceWith(attachmentLink(link.text(), target, result));
+			case EXTERNAL -> log.debug("Leaving external link '{}' unchanged", href);
+			case UNRESOLVED -> {
+				log.warn("Cannot resolve link '{}' on page {}, keeping the text only", href, page.getTitle());
+				link.replaceWith(new Element("span").appendText(link.text()));
+			}
+			}
+		});
+	}
+
+	private Element pageLink(final String text, final LinkResolver.Target target) {
+		final var acLink = newLink(target.anchor());
+		final var riPage = acLink.appendElement("ri:page", "ri").attr("ri:content-title", target.title());
+		if (target.foreign()) {
+			riPage.attr("ri:space-key", target.spaceKey());
+		}
+		return appendBody(acLink, StringUtils.defaultIfBlank(text, target.title()));
+	}
+
+	private Element anchorLink(final String text, final String anchor) {
+		return appendBody(newLink(anchor), text);
+	}
+
+	private Element attachmentLink(final String text, final LinkResolver.Target target, final Result result) {
+		final var attachment = new Attachment();
+		attachment.setFileName(target.fileName());
+		attachment.setSource(target.file());
+		result.add(attachment);
+		log.info("Transform file link to attachment {}", attachment.getFileName());
+		final var acLink = newLink(null);
+		acLink.appendElement("ri:attachment", "ri").attr("ri:filename", attachment.getFileName());
+		return appendBody(acLink, StringUtils.defaultIfBlank(text, attachment.getFileName()));
+	}
+
+	private static Element newLink(final String anchor) {
+		final var acLink = new Element("ac:link", "ac");
+		if (StringUtils.isNotBlank(anchor)) {
+			acLink.attr("ac:anchor", anchor);
+		}
+		return acLink;
+	}
+
+	/**
+	 * Adds the link text wrapped in the CDATA placeholder that
+	 * {@link #sanitizeBody(Element)} later turns into a real CDATA section.
+	 */
+	private static Element appendBody(final Element acLink, final String text) {
+		acLink.appendElement("ac:plain-text-link-body", "ac").appendElement("cdata-placeholder").appendText(text);
+		return acLink;
 	}
 
 	/**

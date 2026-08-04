@@ -17,7 +17,9 @@ package io.github.huber_and.atlassian.wiki;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -25,6 +27,8 @@ import io.github.huber_and.atlassian.wiki.Configuration.Mapper;
 import io.github.huber_and.atlassian.wiki.parser.AntoraParser;
 import io.github.huber_and.atlassian.wiki.parser.Parser;
 import io.github.huber_and.atlassian.wiki.transformer.ConfluenceTransformer;
+import io.github.huber_and.atlassian.wiki.transformer.LinkResolver;
+import io.github.huber_and.atlassian.wiki.transformer.LinkResolver.MapperPages;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -43,36 +47,53 @@ public class Publisher {
 	/** The configuration containing space mappings and authentication details. */
 	private final Configuration config;
 
-	/** The Confluence client for API interactions. */
-	private final ConfluenceClient client;
-
 	/** The parser for extracting page content from source files. */
 	private final Parser parser;
 
 	/**
 	 * Constructs a Publisher with the given configuration.
 	 *
-	 * Initializes the parser and Confluence client based on the provided configuration.
-	 *
 	 * @param config the publisher configuration
 	 */
 	public Publisher(final Configuration config) {
 		this.config = config;
 		parser = new AntoraParser(config);
-		client = new ConfluenceClient(config, parser, new ConfluenceTransformer());
 	}
 
 	/**
 	 * Publishes content to all configured Confluence spaces.
 	 *
-	 * Iterates through all mappers in the configuration and publishes content to each
-	 * specified space.
+	 * Runs in two phases: every mapper is parsed first, then the resulting page trees
+	 * are combined into a single link index and the content is published. The order
+	 * matters for cross-space links — a page can only be linked by title and space
+	 * key once the page trees of all mappers are known.
+	 *
+	 * A mapper that fails to parse is reported and skipped; the remaining mappers are
+	 * still published, but without its pages in the index.
 	 */
 	public void publish() {
 		final List<String> failed = new ArrayList<>();
+		final Map<Mapper, List<Page>> parsed = new LinkedHashMap<>();
 		for (final Mapper mapper : config.getMappers()) {
-			if (!publish(mapper)) {
+			try {
+				final var pages = parser.resolvePages(Path.of(mapper.getPath()));
+				pages.forEach(p -> dump(p, 1));
+				parsed.put(mapper, pages);
+			} catch (final Exception e) {
+				log.error("Failed to parse content for space {}", mapper.getSpaceKey(), e);
 				failed.add(mapper.getSpaceKey());
+			}
+		}
+
+		final var resolver = LinkResolver.of(parsed.entrySet().stream()
+				.map(e -> new MapperPages(e.getKey().getSpaceKey(), Path.of(e.getKey().getPath()),
+						e.getKey().getRoot(), e.getValue()))
+				.toList());
+		final var client = new ConfluenceClient(config, parser, new ConfluenceTransformer(resolver));
+
+		for (final var entry : parsed.entrySet()) {
+			if (!publish(entry.getKey(), entry.getValue(), client)) {
+				failed.add(entry.getKey().getSpaceKey());
 			}
 		}
 		if (!failed.isEmpty()) {
@@ -81,20 +102,19 @@ public class Publisher {
 	}
 
 	/**
-	 * Publishes content to a specific Confluence space using the given mapper.
+	 * Publishes already parsed content to a specific Confluence space.
 	 *
-	 * Parses the source content, logs the page hierarchy, and updates pages in the
-	 * target Confluence space. Errors are logged and reported via the return value
-	 * so the surrounding loop can continue with the remaining mappers.
+	 * Errors are logged and reported via the return value so the surrounding loop can
+	 * continue with the remaining mappers.
 	 *
 	 * @param mapper the space mapper defining the target space and source path
+	 * @param pages  the page tree parsed for this mapper
+	 * @param client the client to publish through
 	 * @return {@code true} on success, {@code false} if publishing this mapper
 	 *         failed
 	 */
-	protected boolean publish(final Mapper mapper) {
+	protected boolean publish(final Mapper mapper, final List<Page> pages, final ConfluenceClient client) {
 		try {
-			final var pages = parser.resolvePages(Path.of(mapper.getPath()));
-			pages.forEach(p -> dump(p, 1));
 			client.updatePages(mapper, pages);
 			return true;
 		} catch (final Exception e) {
