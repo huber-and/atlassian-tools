@@ -19,14 +19,90 @@
 		<maven.compiler.target>21</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<enforcer.plugin.version>3.6.0</enforcer.plugin.version>
-		<flatten.plugin.version>1.7.1</flatten.plugin.version>
+		<enforcer.plugin.version>3.6.3</enforcer.plugin.version>
+		<flatten.plugin.version>1.8.0</flatten.plugin.version>
 		<gpg.plugin.version>3.2.8</gpg.plugin.version>
 		<javadoc.plugin.version>3.12.0</javadoc.plugin.version>
 		<maven-plugin.version>3.9.0</maven-plugin.version>
 		<source.plugin.version>3.4.0</source.plugin.version>
+		<surefire.plugin.version>3.5.6</surefire.plugin.version>
 		<maven-plugin-tools.version>3.15.2</maven-plugin-tools.version>
+		<central-publishing.plugin.version>0.11.0</central-publishing.plugin.version>
+		<openapi-generator.plugin.version>7.24.0</openapi-generator.plugin.version>
+		<frontend.plugin.version>2.0.2</frontend.plugin.version>
+		<!-- Minimum Maven version: central-publishing-maven-plugin requires >= 3.9.2 -->
+		<minimum.maven.version>3.9.2</minimum.maven.version>
+
+		<!-- Shared dependency versions, applied via dependencyManagement below -->
+		<slf4j.version>2.0.18</slf4j.version>
+		<lombok.version>1.18.46</lombok.version>
+		<jsoup.version>1.23.1</jsoup.version>
+		<commons-lang3.version>3.20.0</commons-lang3.version>
+		<jackson.version>2.22.1</jackson.version>
+		<junit.version>6.1.2</junit.version>
+		<jakarta-annotation.version>3.0.0</jakarta-annotation.version>
+		<swagger-annotations.version>2.2.53</swagger-annotations.version>
+		<httpclient5.version>5.6.3</httpclient5.version>
 	</properties>
+	<dependencyManagement>
+		<dependencies>
+			<!-- BOM imports: keep the whole family on one consistent version -->
+			<dependency>
+				<groupId>org.junit</groupId>
+				<artifactId>junit-bom</artifactId>
+				<version>${junit.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>com.fasterxml.jackson</groupId>
+				<artifactId>jackson-bom</artifactId>
+				<version>${jackson.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>slf4j-api</artifactId>
+				<version>${slf4j.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>slf4j-simple</artifactId>
+				<version>${slf4j.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.projectlombok</groupId>
+				<artifactId>lombok</artifactId>
+				<version>${lombok.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.jsoup</groupId>
+				<artifactId>jsoup</artifactId>
+				<version>${jsoup.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.commons</groupId>
+				<artifactId>commons-lang3</artifactId>
+				<version>${commons-lang3.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>jakarta.annotation</groupId>
+				<artifactId>jakarta.annotation-api</artifactId>
+				<version>${jakarta-annotation.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>io.swagger.core.v3</groupId>
+				<artifactId>swagger-annotations</artifactId>
+				<version>${swagger-annotations.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.httpcomponents.client5</groupId>
+				<artifactId>httpclient5</artifactId>
+				<version>${httpclient5.version}</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 	<licenses>
 		<license>
 			<name>The Apache License, Version 2.0</name>
@@ -132,7 +208,7 @@
 						<configuration>
 							<rules>
 								<requireMavenVersion>
-									<version>3.9</version>
+									<version>${minimum.maven.version}</version>
 								</requireMavenVersion>
 							</rules>
 						</configuration>
@@ -142,7 +218,7 @@
 			<plugin>
 				<groupId>org.sonatype.central</groupId>
 				<artifactId>central-publishing-maven-plugin</artifactId>
-				<version>0.9.0</version>
+				<version>${central-publishing.plugin.version}</version>
 				<extensions>true</extensions>
 				<configuration>
 					<publishingServerId>central</publishingServerId>
@@ -155,6 +231,13 @@
 		</plugins>
 		<pluginManagement>
 			<plugins>
+				<!-- Pinned explicitly: the Maven 3.9 default surefire predates
+				JUnit Platform 6 and would silently skip all tests -->
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-surefire-plugin</artifactId>
+					<version>${surefire.plugin.version}</version>
+				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-plugin-plugin</artifactId>
@@ -188,11 +271,11 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-enforcer-plugin</artifactId>
-						<version>3.6.0</version>
+						<version>${enforcer.plugin.version}</version>
 						<configuration>
 							<rules>
 								<requireMavenVersion>
-									<version>3.9</version>
+									<version>${minimum.maven.version}</version>
 								</requireMavenVersion>
 								<reactorModuleConvergence>
 									<message>The reactor is not valid</message>
