@@ -20,7 +20,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
     steps:
     - uses: actions/checkout@v7
     - name: Set up JDK 21
@@ -29,18 +28,20 @@ jobs:
         java-version: '21'
         distribution: 'temurin'
         cache: maven
-        server-id: central # Value of the distributionManagement/repository/id field of the pom.xml
+        server-id: central # Server id the central-publishing-maven-plugin authenticates with
         server-username: MAVEN_USERNAME # env variable for username in deploy
         server-password: MAVEN_CENTRAL_TOKEN # env variable for token in deploy
         gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }} # Value of the GPG private key to import
         gpg-passphrase: MAVEN_GPG_PASSPHRASE # env variable for GPG private key passphrase
-        
+
     - name: Build with Maven
       run: ./mvnw -B package --file pom.xml
-    - name: Publish SNAPSHOT to GitHub Packages Apache Maven
+    # Deployment is routed by the central-publishing-maven-plugin, not by
+    # distributionManagement: snapshots land in the Central Portal snapshot
+    # repository at https://central.sonatype.com/repository/maven-snapshots/
+    - name: Publish SNAPSHOT to the Central Portal
       run: ./mvnw deploy
       env:
-        GITHUB_TOKEN: ${{ github.token }}
         MAVEN_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
         MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
         MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
