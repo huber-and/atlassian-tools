@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2024-2026 Andreas Huber
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,15 @@
 package io.github.huber_and.atlassian.wiki.transformer;
 
 import java.nio.file.Files;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 import org.jsoup.nodes.Element;
 
 import io.github.huber_and.atlassian.wiki.Attachment;
 import io.github.huber_and.atlassian.wiki.Page;
+import io.github.huber_and.atlassian.wiki.util.SafePaths;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -47,6 +50,19 @@ public class ConfluenceTransformer implements Transformer {
 
 	/** Placeholder for CDATA section end. */
 	private static final String CDATA_PLACEHOLDER_END = "</cdata-placeholder>";
+
+	/** Allowed values for the {@code ac:width} attribute on images. */
+	private static final Pattern IMG_WIDTH_PATTERN = Pattern.compile("[0-9]+(px|%)?");
+
+	/**
+	 * Languages accepted as {@code language} parameter of the Confluence code
+	 * macro. Unknown values are dropped to avoid passing arbitrary strings into
+	 * the Confluence Storage Format.
+	 */
+	private static final Set<String> ALLOWED_CODE_LANGUAGES = Set.of("actionscript3", "applescript", "bash",
+			"coldfusion", "cpp", "csharp", "css", "delphi", "diff", "erlang", "go", "groovy", "haskell", "html",
+			"java", "javafx", "javascript", "json", "kotlin", "perl", "php", "powershell", "py", "python", "ruby",
+			"sass", "scala", "shell", "sql", "swift", "tex", "text", "typescript", "vb", "xml", "yaml", "yml");
 
 	/**
 	 * Transforms page content to Confluence storage format.
@@ -97,7 +113,17 @@ public class ConfluenceTransformer implements Transformer {
 		final var imgWidth = image.attr("width");
 		final var imgAlign = StringUtils.defaultIfBlank(image.attr("align"), "center");
 
-		final var source = page.getSource().getParent().resolve(src);
+		if (StringUtils.isBlank(src)) {
+			return;
+		}
+		final java.nio.file.Path source;
+		try {
+			source = SafePaths.resolveWithin(page.getSource().getParent(), src);
+		} catch (final IllegalArgumentException e) {
+			log.warn("Removing unsafe image src '{}': {}", src, e.getMessage());
+			image.remove();
+			return;
+		}
 		if (!Files.exists(source)) {
 			log.info("Image {} does not exists", source);
 			return;
@@ -110,8 +136,10 @@ public class ConfluenceTransformer implements Transformer {
 		result.add(attachment);
 		final var acImage = new Element("ac:image", "ac");
 		acImage.attr("ac:align", imgAlign);
-		if (StringUtils.isNotBlank(imgWidth)) {
+		if (StringUtils.isNotBlank(imgWidth) && IMG_WIDTH_PATTERN.matcher(imgWidth).matches()) {
 			acImage.attr("ac:width", imgWidth);
+		} else if (StringUtils.isNotBlank(imgWidth)) {
+			log.warn("Dropping non-numeric image width '{}' on {}", imgWidth, attachment.getFileName());
 		}
 		acImage.appendElement("ri:attachment", "ri").attr("ri:filename", attachment.getFileName());
 		image.replaceWith(acImage);
@@ -129,14 +157,27 @@ public class ConfluenceTransformer implements Transformer {
 	private void transformCodeBlocks(final Element content) {
 		content.select("pre > code").forEach(code -> {
 			final var parent = code.parent();
-			final var language = code.attr("data-lang");
+			final var rawLanguage = code.attr("data-lang");
+			final var language = sanitizeLanguage(rawLanguage);
 			final var codeMacro = new Element("ac:structured-macro", "ac");
 			codeMacro.attr("ac:name", "code");
-			codeMacro.appendElement("ac:parameter", "ac").attr("ac:name", "language").appendText(language);
+			if (language != null) {
+				codeMacro.appendElement("ac:parameter", "ac").attr("ac:name", "language").appendText(language);
+			} else if (StringUtils.isNotBlank(rawLanguage)) {
+				log.warn("Dropping unknown code language '{}'", rawLanguage);
+			}
 			codeMacro.appendElement("ac:plain-text-body", "ac").appendElement("cdata-placeholder")
 					.appendText(code.html());
 			parent.replaceWith(codeMacro);
 		});
+	}
+
+	private static String sanitizeLanguage(final String raw) {
+		if (StringUtils.isBlank(raw)) {
+			return null;
+		}
+		final var normalized = raw.trim().toLowerCase();
+		return ALLOWED_CODE_LANGUAGES.contains(normalized) ? normalized : null;
 	}
 
 	/**

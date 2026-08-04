@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2024-2026 Andreas Huber
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 package io.github.huber_and.atlassian.wiki;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -67,27 +69,38 @@ public class Publisher {
 	 * specified space.
 	 */
 	public void publish() {
-
-		config.getMappers().forEach(this::publish);
+		final List<String> failed = new ArrayList<>();
+		for (final Mapper mapper : config.getMappers()) {
+			if (!publish(mapper)) {
+				failed.add(mapper.getSpaceKey());
+			}
+		}
+		if (!failed.isEmpty()) {
+			throw new IllegalStateException("Failed to publish to spaces: " + failed);
+		}
 	}
 
 	/**
 	 * Publishes content to a specific Confluence space using the given mapper.
 	 *
 	 * Parses the source content, logs the page hierarchy, and updates pages in the
-	 * target Confluence space. Any errors are logged without stopping the process.
+	 * target Confluence space. Errors are logged and reported via the return value
+	 * so the surrounding loop can continue with the remaining mappers.
 	 *
 	 * @param mapper the space mapper defining the target space and source path
+	 * @return {@code true} on success, {@code false} if publishing this mapper
+	 *         failed
 	 */
-	protected void publish(final Mapper mapper) {
+	protected boolean publish(final Mapper mapper) {
 		try {
 			final var pages = parser.resolvePages(Path.of(mapper.getPath()));
 			pages.forEach(p -> dump(p, 1));
 			client.updatePages(mapper, pages);
+			return true;
 		} catch (final Exception e) {
 			log.error("Failed to publish to space {}", mapper.getSpaceKey(), e);
+			return false;
 		}
-
 	}
 
 	/**

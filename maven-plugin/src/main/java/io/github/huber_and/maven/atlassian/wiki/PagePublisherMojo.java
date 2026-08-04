@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2024-2026 Andreas Huber
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package io.github.huber_and.maven.atlassian.wiki;
 import java.net.URI;
 import java.util.Set;
 
+import javax.inject.Inject;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
@@ -27,6 +29,10 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.settings.Server;
+import org.apache.maven.settings.building.SettingsProblem;
+import org.apache.maven.settings.crypto.DefaultSettingsDecryptionRequest;
+import org.apache.maven.settings.crypto.SettingsDecrypter;
+import org.apache.maven.settings.crypto.SettingsDecryptionResult;
 
 import io.github.huber_and.atlassian.wiki.Configuration;
 import io.github.huber_and.atlassian.wiki.Publisher;
@@ -62,7 +68,7 @@ import io.github.huber_and.atlassian.wiki.Publisher;
  *
  * @author Andreas Huber
  */
-@Mojo(name = "publish", defaultPhase = LifecyclePhase.NONE)
+@Mojo(name = "publish", defaultPhase = LifecyclePhase.NONE, threadSafe = true)
 public class PagePublisherMojo extends AbstractMojo {
 
 	/**
@@ -81,13 +87,19 @@ public class PagePublisherMojo extends AbstractMojo {
 
 	/**
 	 * The username for authentication. If not provided, will use Maven server
-	 * configuration.
+	 * configuration. Configure in {@code <configuration>}; cannot be set via CLI
+	 * property to avoid leaking credentials into build logs.
 	 */
-	@Parameter(property = "username")
+	@Parameter
 	private String username;
 
-	/** The password or API token for authentication. */
-	@Parameter(property = "password")
+	/**
+	 * The password or API token for authentication. Configure in
+	 * {@code <configuration>} or — preferred — via Maven server configuration in
+	 * {@code settings.xml}. Cannot be set via CLI property to avoid leaking
+	 * credentials into build logs.
+	 */
+	@Parameter
 	private String password;
 
 	/** The current Maven session, used to access server configuration. */
@@ -97,6 +109,21 @@ public class PagePublisherMojo extends AbstractMojo {
 	/** The set of mappers defining how local content maps to Confluence spaces. */
 	@Parameter(required = true)
 	private Set<Configuration.Mapper> mappers;
+
+	/**
+	 * If {@code true}, skip the Confluence publish step. Can be set on the CLI via
+	 * {@code -Datlassian.skip=true} or in {@code <configuration>}.
+	 */
+	@Parameter(property = "atlassian.skip", defaultValue = "false")
+	private boolean skip;
+
+	/** Maven helper for decrypting passwords stored in {@code settings.xml}. */
+	private final SettingsDecrypter settingsDecrypter;
+
+	@Inject
+	public PagePublisherMojo(final SettingsDecrypter settingsDecrypter) {
+		this.settingsDecrypter = settingsDecrypter;
+	}
 
 	/**
 	 * Executes the Maven Mojo to publish pages to Confluence.
@@ -109,7 +136,19 @@ public class PagePublisherMojo extends AbstractMojo {
 	 */
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
-		final var uri = URI.create(url);
+		if (skip) {
+			getLog().info("Skipping atlassian:publish (atlassian.skip=true)");
+			return;
+		}
+		if (mappers == null || mappers.isEmpty()) {
+			throw new MojoExecutionException("At least one <mapper> must be configured");
+		}
+		final URI uri;
+		try {
+			uri = URI.create(url);
+		} catch (final IllegalArgumentException e) {
+			throw new MojoExecutionException("Invalid <url>: " + url, e);
+		}
 		getLog().info("Publish pages to " + uri.getHost());
 		final var config = new Configuration();
 		config.setUrl(url);
@@ -124,9 +163,11 @@ public class PagePublisherMojo extends AbstractMojo {
 			config.setUsername(username);
 			config.setPassword(password);
 		}
-		final var publisher = new Publisher(config);
-		publisher.publish();
-
+		try {
+			new Publisher(config).publish();
+		} catch (final RuntimeException e) {
+			throw new MojoFailureException("Confluence publish failed: " + e.getMessage(), e);
+		}
 	}
 
 	private Server resolveServer(final URI uri) {
@@ -134,6 +175,20 @@ public class PagePublisherMojo extends AbstractMojo {
 		if (StringUtils.isBlank(serverId)) {
 			id = uri.getHost();
 		}
-		return session.getSettings().getServer(id);
+		final var server = session.getSettings().getServer(id);
+		if (server == null) {
+			return null;
+		}
+		return decrypt(server);
+	}
+
+	private Server decrypt(final Server server) {
+		final SettingsDecryptionResult result = settingsDecrypter
+				.decrypt(new DefaultSettingsDecryptionRequest(server));
+		for (final SettingsProblem problem : result.getProblems()) {
+			getLog().warn("Settings decryption: " + problem.getMessage());
+		}
+		final var decrypted = result.getServer();
+		return decrypted != null ? decrypted : server;
 	}
 }

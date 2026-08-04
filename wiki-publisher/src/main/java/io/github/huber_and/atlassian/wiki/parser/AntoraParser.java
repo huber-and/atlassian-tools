@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2024-2026 Andreas Huber
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import org.jsoup.nodes.Entities;
 
 import io.github.huber_and.atlassian.wiki.Configuration;
 import io.github.huber_and.atlassian.wiki.Page;
+import io.github.huber_and.atlassian.wiki.util.SafePaths;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -89,7 +90,11 @@ public class AntoraParser implements Parser {
 			final var href = element.attr("href");
 			Path source = null;
 			if (StringUtils.isNotBlank(href)) {
-				source = root.resolve(href);
+				try {
+					source = SafePaths.resolveWithin(root, href);
+				} catch (final IllegalArgumentException e) {
+					log.warn("Skipping nav entry with unsafe href '{}': {}", href, e.getMessage());
+				}
 			}
 			final var item = new Page(element.text().trim(), source, path[depth - 1]);
 			path[depth] = item;

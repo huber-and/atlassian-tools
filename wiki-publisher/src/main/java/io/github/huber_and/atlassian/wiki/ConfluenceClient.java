@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2024-2026 Andreas Huber
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,8 +26,16 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hc.client5.http.config.ConnectionConfig;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.core5.util.Timeout;
 
 import io.github.huber_and.atlassian.wiki.Configuration.Mapper;
 import io.github.huber_and.atlassian.wiki.parser.Parser;
@@ -106,14 +114,14 @@ public class ConfluenceClient {
 		this.config = config;
 		this.parser = parser;
 		this.transformer = transformer;
-		clientV1 = new ApiClient();
+		clientV1 = new ApiClient(buildHttpClient());
 		clientV1.setUsername(config.getUsername());
 		clientV1.setPassword(config.getPassword());
 		final var serverV1 = new ServerConfiguration(config.getUrl() + "/rest/api", null, Collections.emptyMap());
 		clientV1.setServers(Collections.singletonList(serverV1));
 		clientV1.setServerIndex(0);
 
-		clientV2 = new ApiClient();
+		clientV2 = new ApiClient(buildHttpClient());
 		clientV2.setUsername(config.getUsername());
 		clientV2.setPassword(config.getPassword());
 		final var serverV2 = new ServerConfiguration(config.getUrl() + "/api/v2", null, Collections.emptyMap());
@@ -123,6 +131,32 @@ public class ConfluenceClient {
 		propertiesApi = new ContentPropertiesApi(clientV2);
 		spaceApi = new SpaceApi(clientV2);
 		pageApi = new PageApi(clientV2);
+	}
+
+	/**
+	 * Builds a {@link CloseableHttpClient} with explicit timeouts and a bounded
+	 * connection pool so the publisher cannot hang indefinitely on an unresponsive
+	 * Confluence instance. TLS uses the JVM defaults — no custom trust manager.
+	 */
+	private static CloseableHttpClient buildHttpClient() {
+		final ConnectionConfig connectionConfig = ConnectionConfig.custom()
+				.setConnectTimeout(Timeout.of(15, TimeUnit.SECONDS))
+				.setSocketTimeout(Timeout.of(60, TimeUnit.SECONDS))
+				.build();
+		final PoolingHttpClientConnectionManager connectionManager = PoolingHttpClientConnectionManagerBuilder
+				.create()
+				.setDefaultConnectionConfig(connectionConfig)
+				.setMaxConnTotal(20)
+				.setMaxConnPerRoute(10)
+				.build();
+		final RequestConfig requestConfig = RequestConfig.custom()
+				.setConnectionRequestTimeout(Timeout.of(15, TimeUnit.SECONDS))
+				.setResponseTimeout(Timeout.of(60, TimeUnit.SECONDS))
+				.build();
+		return HttpClients.custom()
+				.setConnectionManager(connectionManager)
+				.setDefaultRequestConfig(requestConfig)
+				.build();
 	}
 
 	/**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2024-2026 Andreas Huber
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,9 @@ import java.util.Set;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 /**
  * Configuration for Confluence publishing operations.
@@ -41,6 +43,8 @@ public class Configuration {
 	private String username;
 
 	/** The password or API token for authentication with Confluence. */
+	@ToString.Exclude
+	@EqualsAndHashCode.Exclude
 	private String password;
 
 	/** Enable debug mode for dry-run operations without actual publishing. */

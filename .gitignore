@@ -14,3 +14,18 @@
 **/node_modules/
 **/*TestLocal.java
 .asciidoctorconfig.adoc
+.vaadin/
+**/.vaadin/
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# Local secrets / overrides
+.env
+.env.local
+settings.xml
+*.log
+
