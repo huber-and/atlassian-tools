@@ -1,14 +1,22 @@
 {
   "devDependencies": {
-    "@antora/lunr-extension": "1.0.0-alpha.12",
+    "@antora/lunr-extension": "1.0.0-alpha.13",
     "@djencks/asciidoctor-antora-indexer": "0.1.3-rc.2",
     "@djencks/asciidoctor-jsonpath": "0.1.3-rc.2",
-    "antora": "^3.1.7",
-    "i": "0.3.7",
-    "npm": "^11.11.1"
+    "antora": "^3.1.15"
   },
   "dependencies": {
-    "@antora/cli": "^3.1.14",
-    "@antora/site-generator-default": "^3.1.14"
+    "@antora/cli": "^3.1.15",
+    "@antora/site-generator-default": "^3.1.15"
+  },
+  "overrides": {
+    "js-yaml": "^4.3.1",
+    "underscore": "^1.13.8",
+    "@djencks/asciidoctor-antora-indexer": {
+      "picomatch": "^2.3.2"
+    },
+    "@djencks/asciidoctor-report-support": {
+      "picomatch": "^2.3.2"
+    }
   }
 }
