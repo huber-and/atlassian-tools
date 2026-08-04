@@ -93,7 +93,8 @@ public class AntoraParser implements Parser {
 				try {
 					source = SafePaths.resolveWithin(root, href);
 				} catch (final IllegalArgumentException e) {
-					log.warn("Skipping nav entry with unsafe href '{}': {}", href, e.getMessage());
+					log.warn("Ignoring unsafe href '{}', keeping nav entry without source: {}", href,
+							e.getMessage());
 				}
 			}
 			final var item = new Page(element.text().trim(), source, path[depth - 1]);
