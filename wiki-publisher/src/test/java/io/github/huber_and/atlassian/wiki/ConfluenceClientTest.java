@@ -26,10 +26,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import net.atlassian.wiki.rest.v2.model.DescendantsResponse;
 import net.atlassian.wiki.rest.v2.model.MultiEntityLinks;
 
 /**
@@ -185,4 +188,58 @@ class ConfluenceClientTest {
 		assertNull(ConfluenceClient.nextCursor(new MultiEntityLinks().next("/wiki/api/v2/pages/42/attachments")));
 	}
 
+	/** Pages the run did not touch are orphans; touched pages must be left alone. */
+	@Test
+	void findOrphansReturnsOnlyUntouchedPages() {
+		final var kept = page("1", "Kept", 1);
+		final var orphan = page("2", "Removed", 1);
+
+		final var orphans = ConfluenceClient.findOrphans(List.of(kept, orphan), Set.of("1"));
+
+		assertEquals(1, orphans.size());
+		assertEquals("2", orphans.getFirst().getId());
+	}
+
+	/**
+	 * A subtree can contain whiteboards, databases or folders. This tool does not
+	 * manage them and must never delete them.
+	 */
+	@Test
+	void findOrphansIgnoresNonPageTypes() {
+		final var whiteboard = new DescendantsResponse().id("9").title("Board").type("whiteboard").depth(1);
+		final var folder = new DescendantsResponse().id("10").title("Folder").type("folder").depth(1);
+
+		assertTrue(ConfluenceClient.findOrphans(List.of(whiteboard, folder), Set.of()).isEmpty());
+	}
+
+	/**
+	 * Deleting a page trashes its descendants too, so orphans must be reported
+	 * deepest-first to keep the follow-up deletions from pointing at pages that are
+	 * already gone.
+	 */
+	@Test
+	void findOrphansOrdersDeepestFirst() {
+		final var shallow = page("1", "Top", 1);
+		final var deep = page("2", "Leaf", 3);
+		final var middle = page("3", "Middle", 2);
+
+		final var orphans = ConfluenceClient.findOrphans(List.of(shallow, deep, middle), Set.of());
+
+		assertEquals(List.of("2", "3", "1"), orphans.stream().map(DescendantsResponse::getId).toList());
+	}
+
+	/** An unknown depth must not break the ordering. */
+	@Test
+	void findOrphansToleratesMissingDepth() {
+		final var withDepth = page("1", "Known", 2);
+		final var withoutDepth = new DescendantsResponse().id("2").title("Unknown").type("page");
+
+		final var orphans = ConfluenceClient.findOrphans(List.of(withoutDepth, withDepth), Set.of());
+
+		assertEquals(List.of("1", "2"), orphans.stream().map(DescendantsResponse::getId).toList());
+	}
+
+	private static DescendantsResponse page(final String id, final String title, final int depth) {
+		return new DescendantsResponse().id(id).title(title).type("page").depth(depth);
+	}
 }

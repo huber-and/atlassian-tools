@@ -40,8 +40,9 @@ wiki-client  →  wiki-publisher  →  maven-plugin
 - Core publishing logic. Entry point is `Publisher`, which wires together three collaborators:
   - `Parser` (interface) / `AntoraParser` (impl) — reads an Antora HTML site, parses the navigation menu from `index.html`, and builds a `Page` tree.
   - `Transformer` (interface) / `ConfluenceTransformer` (impl) — converts Jsoup `Element` content into Confluence Storage Format (handles images→`ac:image`, code blocks→`ac:structured-macro`, CDATA wrapping, class attribute removal).
-  - `ConfluenceClient` — orchestrates REST calls using the `wiki-client`; uses V2 for pages/spaces/properties and attachment listing/deletion, and V1 for attachment uploads.
+  - `ConfluenceClient` — orchestrates REST calls using the `wiki-client`; uses V2 for pages/spaces/properties/descendants/attachment deletion and V1 for attachment uploads.
 - Change detection is hash-based and split in two: the page body is compared against the `page-content-hash` page property, each attachment against the SHA-256 stored in its own `comment` field (`sha256:<hex>`). The two decisions are independent — a changed image is published even when the body is unchanged.
+- After every mapper run, `ConfluenceClient` reconciles the remote subtree below `<root>` with the local page tree: descendants not touched by the run are orphans and are moved to the trash unless `Mapper.deleteOrphans` is `false`, in which case they are only logged. Orphans are deleted deepest-first, because trashing a page takes its descendants with it.
 - `Configuration` / `Configuration.Mapper` are plain Lombok `@Data` classes; `Configuration.debug = true` enables a **dry-run** that skips all actual writes to Confluence.
 - `Utils.retry(operation, maxRetries)` is used around every API call; always wrap new API calls with it.
 

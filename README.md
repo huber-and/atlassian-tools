@@ -84,6 +84,7 @@ Configure the plugin in your `pom.xml`:
                 <mappers>
                     <mapper>
                         <spaceKey>DOCS</spaceKey>
+                        <root>Architecture</root>
                         <path>src/docs/site</path>
                     </mapper>
                 </mappers>
@@ -91,6 +92,28 @@ Configure the plugin in your `pom.xml`:
         </plugin>
     </plugins>
 </build>
+```
+
+#### Mapper options
+
+| Element | Default | Description |
+|---|---|---|
+| `spaceKey` | — | The Confluence space key to publish into. Required. |
+| `path` | — | Local directory containing the generated site. Required. |
+| `root` | — | Title of the page all content is created under. Without it, pages are created at space level. |
+| `deleteOrphans` | `true` | Move pages below `root` that no longer exist locally to the Confluence trash. |
+
+`deleteOrphans` is what keeps the space in sync when a page is deleted or renamed — without it, the previous page
+stays behind. It only takes effect when `root` is set, because otherwise the scope would be the entire space.
+Setting it to `false` does not disable the check: orphans are still reported in the build log as
+`Would move to trash: …`, so you can preview exactly what enabling it would remove.
+
+Pages are deleted into the trash, never purged, so anything removed by mistake can be restored in Confluence.
+
+#### Skipping the publish
+
+```bash
+mvn atlassian:publish -Datlassian.skip=true
 ```
 
 ## Building from Source

@@ -25,7 +25,9 @@ import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
@@ -54,15 +56,17 @@ import net.atlassian.wiki.rest.ServerConfiguration;
 import net.atlassian.wiki.rest.v1.api.ContentAttachmentsApi;
 import net.atlassian.wiki.rest.v2.api.AttachmentApi;
 import net.atlassian.wiki.rest.v2.api.ContentPropertiesApi;
+import net.atlassian.wiki.rest.v2.api.DescendantsApi;
 import net.atlassian.wiki.rest.v2.api.PageApi;
 import net.atlassian.wiki.rest.v2.api.SpaceApi;
 import net.atlassian.wiki.rest.v2.model.AttachmentBulk;
 import net.atlassian.wiki.rest.v2.model.ContentPropertyCreateRequest;
-import net.atlassian.wiki.rest.v2.model.MultiEntityLinks;
 import net.atlassian.wiki.rest.v2.model.ContentPropertyUpdateRequest;
 import net.atlassian.wiki.rest.v2.model.ContentPropertyUpdateRequestVersion;
 import net.atlassian.wiki.rest.v2.model.CreatePageRequest;
 import net.atlassian.wiki.rest.v2.model.CreatePageRequestBody;
+import net.atlassian.wiki.rest.v2.model.DescendantsResponse;
+import net.atlassian.wiki.rest.v2.model.MultiEntityLinks;
 import net.atlassian.wiki.rest.v2.model.PageBulk;
 import net.atlassian.wiki.rest.v2.model.UpdatePageRequest;
 import net.atlassian.wiki.rest.v2.model.UpdatePageRequestVersion;
@@ -115,6 +119,9 @@ public class ConfluenceClient {
 	/** API for listing and deleting attachments (v2). */
 	private final AttachmentApi attachmentApi;
 
+	/** API for enumerating the descendants of a page. */
+	private final DescendantsApi descendantsApi;
+
 	/** API for managing content properties. */
 	private final ContentPropertiesApi propertiesApi;
 
@@ -156,6 +163,7 @@ public class ConfluenceClient {
 		clientV2.setServerIndex(0);
 		attachmentsApi = new ContentAttachmentsApi(clientV1);
 		attachmentApi = new AttachmentApi(clientV2);
+		descendantsApi = new DescendantsApi(clientV2);
 		propertiesApi = new ContentPropertiesApi(clientV2);
 		spaceApi = new SpaceApi(clientV2);
 		pageApi = new PageApi(clientV2);
@@ -194,13 +202,17 @@ public class ConfluenceClient {
 	 * are created at the space root level. Each page and its children are
 	 * recursively processed.
 	 *
+	 * Once every page has been processed, the remote page structure below the root
+	 * page is reconciled with the local one: pages that exist in Confluence but not
+	 * locally are reported and — unless {@code deleteOrphans} is disabled on the
+	 * mapper — moved to the trash.
+	 *
 	 * @param mapper the space mapper defining the target space and configuration
 	 * @param pages  the list of pages to update or create
 	 * @throws Exception if an error occurs during the update operation
 	 */
 	public void updatePages(final Mapper mapper, final List<Page> pages) throws Exception {
 		var spaceId = mapper.getSpaceKey();
-		final List<PageBulk> list = new ArrayList<>();
 		if (!config.isDebug()) {
 			final List<String> keys = List.of(spaceId);
 			final var space = Utils.retry(
@@ -209,13 +221,21 @@ public class ConfluenceClient {
 					1);
 			spaceId = space.getId();
 		}
+		final Set<String> touched = new LinkedHashSet<>();
 		PageBulk root = null;
 		if (StringUtils.isNotBlank(mapper.getRoot())) {
 			root = createOrUpdatePage(new Page(mapper.getRoot(), Path.of(mapper.getPath(), "index.html"), null), null,
-					spaceId, list);
+					spaceId, touched);
 		}
 		for (final Page page : pages) {
-			createOrUpdatePage(page, root != null ? root.getId() : null, spaceId, list);
+			createOrUpdatePage(page, root != null ? root.getId() : null, spaceId, touched);
+		}
+		if (root == null) {
+			log.warn("No root page configured for space {}, skipping orphan detection", mapper.getSpaceKey());
+		} else if (config.isDebug()) {
+			log.info("Debug mode, skipping orphan detection below {}", root.getTitle());
+		} else {
+			syncPageStructure(root, touched, mapper.isDeleteOrphans());
 		}
 	}
 
@@ -229,14 +249,16 @@ public class ConfluenceClient {
 	 * @param page     the page to create or update
 	 * @param parentId the parent page ID, or null if at root level
 	 * @param spaceId  the target space ID
-	 * @param list     existing pages in the space for lookup
+	 * @param touched  collects the IDs of all pages processed by this run, used
+	 *                 afterwards to detect orphaned remote pages
 	 * @return the created or updated page
 	 * @throws Exception if an error occurs during the operation
 	 */
 	protected PageBulk createOrUpdatePage(final Page page, final String parentId, final String spaceId,
-			final List<PageBulk> list) throws Exception {
+			final Set<String> touched) throws Exception {
 		log.info("Create or update page {} ", page.getTitle());
-		final var remote = getOrCreatePage(page, parentId, spaceId, list);
+		final var remote = getOrCreatePage(page, parentId, spaceId);
+		touched.add(remote.getId());
 		if (page.getSource() != null) {
 			final var content = parser.loadContent(page);
 			final var result = transformer.transform(page, content);
@@ -245,14 +267,14 @@ public class ConfluenceClient {
 			syncAttachments(remote.getId(), result.getAttachments());
 		}
 		for (final Page child : page.getChildren()) {
-			createOrUpdatePage(child, remote.getId(), spaceId, list);
+			createOrUpdatePage(child, remote.getId(), spaceId, touched);
 		}
 		return remote;
 
 	}
 
-	private PageBulk getOrCreatePage(final Page page, final String parentId, final String spaceId,
-			final List<PageBulk> list) throws Exception {
+	private PageBulk getOrCreatePage(final Page page, final String parentId, final String spaceId)
+			throws Exception {
 		final var title = page.getTitle();
 		var remote = Utils.retry(() -> pageApi
 				.getPagesInSpace(Long.parseLong(spaceId), "all", null, List.of("current"), title, null, null, 1)
@@ -270,7 +292,7 @@ public class ConfluenceClient {
 							.build(),
 					null, null, null), 1);
 			remote = new PageBulk().id(response.getId()).title(response.getTitle()).spaceId(response.getSpaceId())
-					.parentId(response.getSpaceId()).version(response.getVersion());
+					.parentId(response.getParentId()).version(response.getVersion());
 		} else {
 			final var pageId = UUID.randomUUID().toString();
 			remote = new PageBulk();
@@ -549,6 +571,63 @@ public class ConfluenceClient {
 	}
 
 	/**
+	 * Reconciles the remote page structure below a root page with the local one.
+	 *
+	 * Every descendant of {@code root} that this run did not process is considered
+	 * orphaned. Orphans are always logged; they are only moved to the trash when
+	 * {@code delete} is set, which makes a disabled {@code deleteOrphans} act as a
+	 * preview of what enabling it would remove.
+	 *
+	 * @param root    the configured root page
+	 * @param touched the IDs of all pages processed by this run
+	 * @param delete  whether orphans should actually be moved to the trash
+	 * @throws Exception if enumerating the descendants fails
+	 */
+	private void syncPageStructure(final PageBulk root, final Set<String> touched, final boolean delete)
+			throws Exception {
+		final var orphans = findOrphans(loadDescendants(root.getId()), touched);
+		if (orphans.isEmpty()) {
+			log.info("Page structure below {} is in sync", root.getTitle());
+			return;
+		}
+		for (final DescendantsResponse orphan : orphans) {
+			if (!delete) {
+				log.info("Would move to trash: {} ({}), set deleteOrphans to enable", orphan.getTitle(),
+						orphan.getId());
+				continue;
+			}
+			log.info("Moving orphaned page to trash: {} ({})", orphan.getTitle(), orphan.getId());
+			try {
+				final var id = Long.parseLong(orphan.getId());
+				Utils.retry(() -> pageApi.deletePage(id, false, false), 1);
+			} catch (final Exception e) {
+				log.error("Failed to delete orphaned page {} ({})", orphan.getTitle(), orphan.getId(), e);
+			}
+		}
+	}
+
+	/**
+	 * Loads all descendants of a page, following cursor-based pagination.
+	 *
+	 * @param pageId the Confluence page ID
+	 * @return all descendants, at any depth
+	 * @throws Exception if an API call fails
+	 */
+	private List<DescendantsResponse> loadDescendants(final String pageId) throws Exception {
+		final var id = Long.parseLong(pageId);
+		final List<DescendantsResponse> result = new ArrayList<>();
+		String cursor = null;
+		do {
+			final var current = cursor;
+			final var response = Utils
+					.retry(() -> descendantsApi.getPageDescendants(id, PAGE_SIZE, null, current), 1);
+			result.addAll(response.getResults());
+			cursor = advanceCursor(current, nextCursor(response.getLinks()));
+		} while (cursor != null);
+		return result;
+	}
+
+	/**
 	 * Guards the pagination loops against an API that keeps returning the same
 	 * cursor, which would otherwise spin forever.
 	 *
@@ -562,6 +641,28 @@ public class ConfluenceClient {
 			return null;
 		}
 		return next;
+	}
+
+	/**
+	 * Selects the pages that exist in Confluence but not locally.
+	 *
+	 * Only entries of type {@code page} are considered — a subtree may also contain
+	 * whiteboards, databases or folders, which this tool does not manage and must
+	 * not touch. The result is ordered deepest-first: moving a page to the trash
+	 * takes its descendants along, so deleting top-down would leave the follow-up
+	 * calls pointing at pages that are already gone.
+	 *
+	 * @param descendants all descendants of the root page
+	 * @param touched     the IDs of all pages processed by this run
+	 * @return the orphaned pages, deepest first
+	 */
+	static List<DescendantsResponse> findOrphans(final Collection<DescendantsResponse> descendants,
+			final Set<String> touched) {
+		return descendants.stream().filter(d -> "page".equalsIgnoreCase(d.getType()))
+				.filter(d -> !touched.contains(d.getId()))
+				.sorted(Comparator.comparing(DescendantsResponse::getDepth,
+						Comparator.nullsLast(Comparator.reverseOrder())))
+				.toList();
 	}
 
 	private void createOrUpdateAttachment(final String contentId, final Attachment attachment, final String hash) {

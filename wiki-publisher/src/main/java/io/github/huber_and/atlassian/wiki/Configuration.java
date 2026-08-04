@@ -71,5 +71,16 @@ public class Configuration {
 
 		/** The local file system path containing the content to publish. */
 		private String path;
+
+		/**
+		 * Whether pages below {@link #root} that no longer exist locally are moved to
+		 * the Confluence trash.
+		 *
+		 * When disabled, such pages are only reported in the build log, which makes it
+		 * possible to preview the effect before enabling the deletion. Requires
+		 * {@link #root} to be set — without a root page the scope would be the whole
+		 * space.
+		 */
+		private boolean deleteOrphans = true;
 	}
 }
