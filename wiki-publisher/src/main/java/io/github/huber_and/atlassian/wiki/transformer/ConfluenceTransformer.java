@@ -16,6 +16,7 @@
 package io.github.huber_and.atlassian.wiki.transformer;
 
 import java.nio.file.Files;
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -204,18 +205,32 @@ public class ConfluenceTransformer implements Transformer {
 	 * @param result  the transformation result to add attachments to
 	 */
 	private void transformLinks(final Page page, final Element content, final Result result) {
-		content.select("a[href]").forEach(link -> {
+		final var counts = new EnumMap<LinkResolver.Kind, Integer>(LinkResolver.Kind.class);
+		var crossSpace = 0;
+		for (final Element link : content.select("a[href]")) {
 			final var href = link.attr("href");
 			if (StringUtils.isBlank(link.text()) && href.startsWith("#")) {
-				return;
+				continue;
 			}
 			final var target = resolver.resolve(page.getSource(), href).orElse(null);
 			if (target == null) {
-				return;
+				continue;
 			}
+			counts.merge(target.kind(), 1, Integer::sum);
 			switch (target.kind()) {
-			case PAGE -> link.replaceWith(pageLink(link.text(), target));
-			case ANCHOR -> link.replaceWith(anchorLink(link.text(), target.anchor()));
+			case PAGE -> {
+				if (target.foreign()) {
+					crossSpace++;
+				}
+				log.debug("Link '{}' resolved to page '{}'{}{}", href, target.title(),
+						target.foreign() ? " in space " + target.spaceKey() : "",
+						target.anchor() != null ? " at anchor " + target.anchor() : "");
+				link.replaceWith(pageLink(link.text(), target));
+			}
+			case ANCHOR -> {
+				log.debug("Link '{}' resolved to anchor '{}' on the same page", href, target.anchor());
+				link.replaceWith(anchorLink(link.text(), target.anchor()));
+			}
 			case ATTACHMENT -> link.replaceWith(attachmentLink(link.text(), target, result));
 			case EXTERNAL -> log.debug("Leaving external link '{}' unchanged", href);
 			case UNRESOLVED -> {
@@ -223,7 +238,30 @@ public class ConfluenceTransformer implements Transformer {
 				link.replaceWith(new Element("span").appendText(link.text()));
 			}
 			}
-		});
+		}
+		logLinkSummary(page, counts, crossSpace);
+	}
+
+	/**
+	 * Reports per page what the link resolution actually did.
+	 *
+	 * Without this a successful resolution would be invisible — only failures were
+	 * logged, so there was no way to tell from a build log whether internal links
+	 * were rewritten at all. Pages without any link stay silent.
+	 */
+	private static void logLinkSummary(final Page page, final Map<LinkResolver.Kind, Integer> counts,
+			final int crossSpace) {
+		final var pages = counts.getOrDefault(LinkResolver.Kind.PAGE, 0);
+		final var anchors = counts.getOrDefault(LinkResolver.Kind.ANCHOR, 0);
+		final var attachments = counts.getOrDefault(LinkResolver.Kind.ATTACHMENT, 0);
+		final var external = counts.getOrDefault(LinkResolver.Kind.EXTERNAL, 0);
+		final var unresolved = counts.getOrDefault(LinkResolver.Kind.UNRESOLVED, 0);
+		if (pages + anchors + attachments + unresolved == 0) {
+			return;
+		}
+		log.info(
+				"Links on page {}: {} page ({} cross-space), {} anchor, {} attachment, {} external, {} unresolved",
+				page.getTitle(), pages, crossSpace, anchors, attachments, external, unresolved);
 	}
 
 	private Element pageLink(final String text, final LinkResolver.Target target) {
