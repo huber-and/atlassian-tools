@@ -18,6 +18,8 @@ package io.github.huber_and.atlassian.wiki;
 import java.util.HashSet;
 import java.util.Set;
 
+import io.github.huber_and.atlassian.wiki.parser.AntoraParser;
+import io.github.huber_and.atlassian.wiki.parser.Parser;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -28,8 +30,8 @@ import lombok.ToString;
  * Configuration for Confluence publishing operations.
  *
  * This class holds the necessary configuration parameters for connecting to and
- * publishing content to Confluence, including authentication credentials and space
- * mappings.
+ * publishing content to Confluence, including authentication credentials and
+ * space mappings.
  *
  * @author Andreas Huber
  */
@@ -39,7 +41,14 @@ public class Configuration {
 	/** The base URL of the Confluence instance. */
 	private String url;
 
-	/** The username for authentication with Confluence. */
+	/**
+	 * The username for authentication with Confluence.
+	 *
+	 * Excluded from {@link #toString()} so that the account identifier — an e-mail
+	 * address for Confluence Cloud — cannot end up in a build log. It still takes
+	 * part in {@code equals}/{@code hashCode}.
+	 */
+	@ToString.Exclude
 	private String username;
 
 	/** The password or API token for authentication with Confluence. */
@@ -54,10 +63,21 @@ public class Configuration {
 	private Set<Mapper> mappers = new HashSet<>();
 
 	/**
-	 * Mapper configuration that defines how local content maps to Confluence spaces.
+	 * Fully qualified name of the {@link Parser} implementation used to read the
+	 * local content.
 	 *
-	 * Maps a local directory structure to a specific Confluence space with an optional
-	 * root page.
+	 * The class is resolved lazily by {@link Publisher} and must implement
+	 * {@link Parser} and provide a public no-argument constructor. Defaults to
+	 * {@link AntoraParser}.
+	 */
+	private String parserClass = AntoraParser.class.getName();
+
+	/**
+	 * Mapper configuration that defines how local content maps to Confluence
+	 * spaces.
+	 *
+	 * Maps a local directory structure to a specific Confluence space with an
+	 * optional root page.
 	 */
 	@Data
 	@NoArgsConstructor

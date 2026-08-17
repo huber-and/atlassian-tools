@@ -21,17 +21,31 @@ import java.util.List;
 
 import org.jsoup.nodes.Element;
 
+import io.github.huber_and.atlassian.wiki.Configuration;
 import io.github.huber_and.atlassian.wiki.Page;
 
 /**
  * Interface for parsing pages from various sources.
  *
- * Implementations of this interface handle the extraction and parsing of page content
- * from different source formats and locations, converting them into a structured Page hierarchy.
+ * Implementations of this interface handle the extraction and parsing of page
+ * content from different source formats and locations, converting them into a
+ * structured Page hierarchy.
  *
  * @author Andreas Huber
  */
 public interface Parser {
+
+	/**
+	 * Initializes the parser with the given configuration.
+	 *
+	 * Called once by the publisher directly after the implementation has been
+	 * instantiated and before any other method is used. Implementations must provide
+	 * a public no-argument constructor.
+	 *
+	 * @param config the configuration to use for parsing
+	 * @throws IOException if an error occurs during initialization
+	 */
+	void init(Configuration config) throws IOException;
 
 	/**
 	 * Resolves the hierarchical list of pages from the given root path.

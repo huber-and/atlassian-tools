@@ -32,7 +32,6 @@ import org.apache.maven.settings.Server;
 import org.apache.maven.settings.building.SettingsProblem;
 import org.apache.maven.settings.crypto.DefaultSettingsDecryptionRequest;
 import org.apache.maven.settings.crypto.SettingsDecrypter;
-import org.apache.maven.settings.crypto.SettingsDecryptionResult;
 
 import io.github.huber_and.atlassian.wiki.Configuration;
 import io.github.huber_and.atlassian.wiki.Publisher;
@@ -117,6 +116,15 @@ public class PagePublisherMojo extends AbstractMojo {
 	@Parameter(property = "atlassian.skip", defaultValue = "false")
 	private boolean skip;
 
+	/**
+	 * Fully qualified class name of the parser used to read the local content. The
+	 * class must implement
+	 * {@code io.github.huber_and.atlassian.wiki.parser.Parser} and provide a public
+	 * no-argument constructor. Defaults to the built-in Antora parser.
+	 */
+	@Parameter(property = "page.parser", defaultValue = "io.github.huber_and.atlassian.wiki.parser.AntoraParser", required = true)
+	private String parserClass;
+
 	/** Maven helper for decrypting passwords stored in {@code settings.xml}. */
 	private final SettingsDecrypter settingsDecrypter;
 
@@ -151,6 +159,7 @@ public class PagePublisherMojo extends AbstractMojo {
 		}
 		getLog().info("Publish pages to " + uri.getHost());
 		final var config = new Configuration();
+		config.setParserClass(parserClass);
 		config.setUrl(url);
 		config.setMappers(mappers);
 		if (StringUtils.isBlank(username)) {
@@ -183,8 +192,7 @@ public class PagePublisherMojo extends AbstractMojo {
 	}
 
 	private Server decrypt(final Server server) {
-		final SettingsDecryptionResult result = settingsDecrypter
-				.decrypt(new DefaultSettingsDecryptionRequest(server));
+		final var result = settingsDecrypter.decrypt(new DefaultSettingsDecryptionRequest(server));
 		for (final SettingsProblem problem : result.getProblems()) {
 			getLog().warn("Settings decryption: " + problem.getMessage());
 		}

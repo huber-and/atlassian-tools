@@ -18,6 +18,7 @@ package io.github.huber_and.atlassian.wiki;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -38,6 +39,20 @@ class ConfigurationTest {
 				() -> "Configuration.toString() leaked password: " + rendered);
 		assertFalse(rendered.toLowerCase().contains("password="),
 				() -> "Configuration.toString() should not include the password field at all: " + rendered);
+	}
+
+	@Test
+	void toStringDoesNotLeakUsername() {
+		final var config = new Configuration();
+		config.setUrl("https://confluence.example.com");
+		config.setUsername("alice@example.com");
+
+		final var rendered = config.toString();
+
+		assertFalse(rendered.contains("alice@example.com"),
+				() -> "Configuration.toString() leaked username: " + rendered);
+		assertTrue(rendered.contains("https://confluence.example.com"),
+				() -> "Configuration.toString() should still be useful for diagnostics: " + rendered);
 	}
 
 	@Test

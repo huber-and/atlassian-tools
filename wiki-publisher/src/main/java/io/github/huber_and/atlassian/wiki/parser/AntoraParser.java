@@ -44,14 +44,17 @@ import lombok.extern.slf4j.Slf4j;
 public class AntoraParser implements Parser {
 
 	/** The configuration for parser behavior. */
-	private final Configuration config;
+	private Configuration config;
 
 	/**
-	 * Constructs an AntoraParser with the given configuration.
+	 * Initializes the parser with the given configuration.
 	 *
-	 * @param config the parser configuration
+	 * @param config the configuration to use for parsing
+	 * @throws IOException if an error occurs during initialization
 	 */
-	public AntoraParser(final Configuration config) {
+	@Override
+	public void init(final Configuration config) throws IOException {
+		log.debug("Initialize Antora parser with configuration: {}", config);
 		this.config = config;
 	}
 
@@ -93,8 +96,7 @@ public class AntoraParser implements Parser {
 				try {
 					source = SafePaths.resolveWithin(root, href);
 				} catch (final IllegalArgumentException e) {
-					log.warn("Ignoring unsafe href '{}', keeping nav entry without source: {}", href,
-							e.getMessage());
+					log.warn("Ignoring unsafe href '{}', keeping nav entry without source: {}", href, e.getMessage());
 				}
 			}
 			final var item = new Page(element.text().trim(), source, path[depth - 1]);
