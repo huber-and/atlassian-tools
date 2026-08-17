@@ -25,6 +25,7 @@ entity Configuration {
   *username: String
   *password: String
   *debug: boolean
+  *parserClass: String
   --
   *mappers: Set<Mapper>
 }
@@ -33,6 +34,24 @@ entity Mapper {
   *spaceKey: String
   *root: String (optional)
   *path: String
+  *deleteOrphans: boolean
+}
+
+entity MapperPages {
+  *spaceKey: String
+  *path: Path
+  *rootTitle: String (optional)
+  --
+  *pages: List<Page>
+}
+
+entity Target {
+  *kind: Kind
+  *title: String (for PAGE)
+  *spaceKey: String (for PAGE)
+  *foreign: boolean
+  *anchor: String (optional)
+  *file: Path (for ATTACHMENT)
 }
 
 entity TransformResult {
@@ -58,6 +77,10 @@ Page ||--o{ Page: parent/children
 Page ||--o{ Attachment: contains
 
 Configuration ||--o{ Mapper: contains
+
+Mapper ||--|| MapperPages: parsed into
+MapperPages ||--o{ Page: holds
+MapperPages --> Target: indexed for link resolution
 
 TransformResult ||--o{ Attachment: returns
 

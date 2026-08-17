@@ -7,11 +7,13 @@ The **Atlassian Tools Maven Plugin** integrates Confluence page publishing direc
 - **Automated Publishing:** Publish documentation to Confluence as part of your build.
 - **Flexible Mapping:** Map different local paths to specific Confluence spaces using `mappers`.
 - **Secure Authentication:** Supports credential management via Maven `settings.xml` or direct configuration.
+- **Orphan Cleanup:** Optionally move Confluence pages that no longer exist locally to the trash.
+- **Pluggable Parser:** Swap the built-in Antora parser for your own implementation.
 
 ## Requirements
 
-- Java 17 or later
-- Maven 3.x
+- Java 21 or later
+- Maven 3.9.2 or later
 
 ## Usage
 
@@ -57,18 +59,54 @@ The main goal of this plugin is `atlassian:publish`. It reads the configured loc
 
 ## Configuration Parameters
 
-| Parameter | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| `url` | `String` | **Yes** | The base URL of your Confluence instance (e.g., `https://confluence.example.com`). |
-| `mappers` | `Set<Mapper>` | **Yes** | A list of mappings defining which local content goes to which Confluence space. |
-| `username` | `String` | No | The username for authentication. If omitted, the plugin looks up credentials in Maven settings. |
-| `password` | `String` | No | The password or API token for authentication. |
+| Parameter | Type | Required | CLI property | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `url` | `String` | **Yes** | `url` | The base URL of your Confluence instance (e.g., `https://confluence.example.com`). |
+| `mappers` | `Set<Mapper>` | **Yes** | – | A list of mappings defining which local content goes to which Confluence space. |
+| `username` | `String` | No | – | The username for authentication. If omitted, the plugin looks up credentials in Maven settings. Deliberately has no CLI property so credentials cannot leak into build logs. |
+| `password` | `String` | No | – | The password or API token for authentication. Deliberately has no CLI property. |
+| `serverId` | `String` | No | `serverId` | ID of the `<server>` entry in `settings.xml` to read credentials from. Defaults to the host part of `url`. |
+| `skip` | `boolean` | No | `atlassian.skip` | If `true`, the goal does nothing. Defaults to `false`. |
+| `parserClass` | `String` | No | `page.parser` | Fully qualified class name of the parser used to read the local content. Defaults to `io.github.huber_and.atlassian.wiki.parser.AntoraParser`. |
 
 ### Mapper Configuration
 
-Each `mapper` element inside `mappers` requires:
-- `spaceKey`: The Key of the Confluence Space where pages will be published.
-- `path`: The path to the local directory containing the content to publish.
+Each `mapper` element inside `mappers` supports:
+
+| Option | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `spaceKey` | `String` | **Yes** | The Key of the Confluence Space where pages will be published. |
+| `path` | `String` | **Yes** | The path to the local directory containing the content to publish. |
+| `root` | `String` | No | Title of an existing page in the space to publish the content under. |
+| `deleteOrphans` | `boolean` | No | If `true` (the default), pages below `root` that no longer exist locally are moved to the Confluence trash. If `false`, they are only reported in the build log, which lets you preview the effect first. Requires `root` to be set — without it the scope would be the whole space. |
+
+### Custom Parser
+
+`parserClass` lets you replace the built-in Antora parser. The class must implement
+`io.github.huber_and.atlassian.wiki.parser.Parser`, provide a public no-argument constructor,
+and be visible on the plugin's classpath — add it as a `<dependency>` of the plugin declaration:
+
+```xml
+<plugin>
+    <groupId>io.github.huber-and.atlassian</groupId>
+    <artifactId>atlassian-maven-plugin</artifactId>
+    <version>${atlassian-tools.version}</version>
+    <configuration>
+        <parserClass>com.example.docs.MyParser</parserClass>
+    </configuration>
+    <dependencies>
+        <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>my-parser</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+    </dependencies>
+</plugin>
+```
+
+The class is resolved without running its static initializers and is only instantiated after it
+has been verified to implement `Parser`, so a typo in the name fails the build instead of
+executing unrelated code.
 
 ## Authentication
 

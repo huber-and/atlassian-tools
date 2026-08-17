@@ -19,9 +19,14 @@ rectangle "Wiki Publisher System" {
   usecase "Publish to Space" as UC8
   usecase "Set Page Properties" as UC9
   usecase "Handle Errors" as UC10
+  usecase "Resolve Internal Links" as UC11
+  usecase "Remove Orphaned Pages" as UC12
+  usecase "Plug In Custom Parser" as UC13
 }
 
 User --> UC1: Provides config\n(URL, credentials, mappers)
+User --> UC13: Provides own\nParser implementation
+UC13 ..> UC2: Replaces the\nbuilt-in Antora parser
 UC1 --> UC8: Triggers
 
 UC8 --> UC2: Extract pages
@@ -29,13 +34,17 @@ UC8 --> UC4: Establish connection
 UC4 --> UC5: Create pages
 UC4 --> UC6: Update pages
 
+UC2 --> UC11: Index page titles\nof all mappers
 UC2 --> UC3: Convert HTML
+UC11 --> UC3: Rewrite hrefs
 UC3 --> UC6: Apply transformations
 UC3 --> UC7: Extract attachments
 
 UC6 --> UC9: Configure appearance
 UC7 --> UC8: Add to pages
 UC9 --> UC8: Complete publication
+UC8 --> UC12: After publishing a space
+UC12 --> UC8: Report or trash
 
 UC8 ..> UC10: On error
 UC1 ..> UC10: On error

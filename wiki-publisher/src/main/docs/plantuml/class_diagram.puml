@@ -7,12 +7,15 @@ skinparam classBorderColor #0066CC
 skinparam arrowColor #333333
 
 class Publisher {
+  {static} -DEFAULT_PARSER_CLASS: String
   -config: Configuration
-  -client: ConfluenceClient
   -parser: Parser
   +Publisher(config: Configuration)
   +publish(): void
-  #publish(mapper: Mapper): void
+  #getParser(): Parser
+  #publish(mapper, pages, client): boolean
+  {static} -createParser(config: Configuration): Parser
+  {static} -loadClass(className: String): Class<?>
   -dump(page: Page, depth: int): void
 }
 
@@ -21,13 +24,15 @@ class Configuration {
   -username: String
   -password: String
   -debug: boolean
+  -parserClass: String
   -mappers: Set<Mapper>
 }
 
-class Configuration.Mapper {
+class "Configuration.Mapper" as Mapper {
   -spaceKey: String
   -root: String
   -path: String
+  -deleteOrphans: boolean
 }
 
 class ConfluenceClient {
@@ -46,16 +51,26 @@ class ConfluenceClient {
   -getOrCreatePage(...): PageBulk
   -updateBody(...): void
   -createOrUpdateAttachment(...): void
+  -syncPageStructure(root, touched, delete): void
+  {static} -findOrphans(descendants, touched): List<DescendantsResponse>
 }
 
 interface Parser {
+  +init(config: Configuration): void
   +resolvePages(root: Path): List<Page>
   +loadContent(page: Page): Element
 }
+note right of Parser
+  Implementations need a public
+  no-argument constructor. Publisher
+  resolves the class named by
+  Configuration.parserClass and calls
+  init(config) once before any use.
+end note
 
 class AntoraParser {
   -config: Configuration
-  +AntoraParser(config: Configuration)
+  +init(config: Configuration): void
   +resolvePages(root: Path): List<Page>
   +loadContent(page: Page): Element
   -load(file: Path): Document
@@ -66,10 +81,43 @@ interface Transformer {
 }
 
 class ConfluenceTransformer {
+  -resolver: LinkResolver
+  +ConfluenceTransformer()
+  +ConfluenceTransformer(resolver: LinkResolver)
   +transform(page: Page, content: Element): Result
 }
 
-class Transformer.Result {
+class LinkResolver {
+  {static} +empty(): LinkResolver
+  {static} +of(sources: Collection<MapperPages>): LinkResolver
+  +resolve(currentPage: Path, href: String): Optional<Target>
+}
+
+class "LinkResolver.MapperPages" as MapperPages <<record>> {
+  +spaceKey: String
+  +path: Path
+  +rootTitle: String
+  +pages: List<Page>
+}
+
+class "LinkResolver.Target" as Target <<record>> {
+  +kind: Kind
+  +title: String
+  +spaceKey: String
+  +foreign: boolean
+  +anchor: String
+  +file: Path
+}
+
+enum "LinkResolver.Kind" as Kind {
+  PAGE
+  ANCHOR
+  ATTACHMENT
+  EXTERNAL
+  UNRESOLVED
+}
+
+class "Transformer.Result" as Result {
   -content: String
   -attachments: List<Attachment>
   +add(attachment: Attachment): void
@@ -92,9 +140,10 @@ class Attachment {
 }
 
 Publisher --> Configuration: uses
-Publisher --> Parser: uses
+Publisher ..> Parser: resolves and creates\nfrom parserClass
 Publisher --> ConfluenceClient: creates
-Configuration --> Configuration.Mapper: contains
+Publisher --> LinkResolver: builds from all mappers
+Configuration --> Mapper: contains
 
 ConfluenceClient --> Configuration: uses
 ConfluenceClient --> Parser: uses
@@ -107,10 +156,15 @@ AntoraParser --> Page: creates
 AntoraParser --> Configuration: uses
 
 Transformer <|.. ConfluenceTransformer: implements
-Transformer --> Transformer.Result: returns
-ConfluenceTransformer --> Transformer.Result: returns
+Transformer --> Result: returns
+ConfluenceTransformer --> Result: returns
+ConfluenceTransformer --> LinkResolver: resolves hrefs
 
-Transformer.Result --> Attachment: contains
+LinkResolver --> MapperPages: indexes
+LinkResolver --> Target: returns
+Target --> Kind: has
+
+Result --> Attachment: contains
 
 Page --> Page: parent-children
 Page --> Attachment: may contain

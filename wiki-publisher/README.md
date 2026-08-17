@@ -6,9 +6,11 @@
 
 - **Automated Publishing:** seamless integration to publish local documentation to Confluence.
 - **Antora Support:** Built-in `AntoraParser` to handle Antora-generated content structures.
+- **Pluggable Parser:** Replace the built-in parser with your own `Parser` implementation.
 - **Multi-Space Mapping:** Configure multiple mappings to publish different documentation sets to different Confluence spaces.
 - **Hierarchy Preservation:** Maintains the page hierarchy from your local documentation when publishing to Confluence.
-- **Content Transformation:** Automatically transforms local content into the Confluence Storage Format.
+- **Content Transformation:** Automatically transforms local content into the Confluence Storage Format, including internal links, attachments and admonitions.
+- **Orphan Cleanup:** Optionally moves pages that no longer exist locally to the Confluence trash.
 
 ## Installation
 
@@ -67,10 +69,11 @@ public class DocPublisher {
 | Option | Type | Description |
 | :--- | :--- | :--- |
 | `url` | `String` | Base URL of your Confluence instance. |
-| `username` | `String` | Username for authentication. |
-| `password` | `String` | Password or API Token. |
+| `username` | `String` | Username for authentication. Excluded from `toString()` so it cannot end up in a log. |
+| `password` | `String` | Password or API Token. Excluded from `toString()`, `equals()` and `hashCode()`. |
 | `debug` | `boolean` | If `true`, performs a dry-run without making changes to Confluence. |
 | `mappers` | `Set<Mapper>` | Set of mapping rules for publishing. |
+| `parserClass` | `String` | Fully qualified class name of the `Parser` implementation. Defaults to `AntoraParser`. |
 
 ### Mapper Options
 
@@ -79,10 +82,27 @@ public class DocPublisher {
 | `spaceKey` | `String` | **Required.** The Key of the Confluence Space to publish to. |
 | `path` | `String` | **Required.** Local filesystem path to the documentation root. |
 | `root` | `String` | Optional. The title of a root page in the space to publish under. |
+| `deleteOrphans` | `boolean` | Defaults to `true`: pages below `root` that no longer exist locally are moved to the Confluence trash. With `false` they are only reported in the log. Requires `root`. |
+
+### Custom Parser
+
+Set `parserClass` to publish content that is not an Antora site. The class must implement
+`io.github.huber_and.atlassian.wiki.parser.Parser` and provide a public no-argument constructor;
+`Publisher` instantiates it and calls `init(Configuration)` once before use.
+
+```java
+config.setParserClass("com.example.docs.MyParser");
+```
+
+The name is resolved via the thread context class loader first — so a parser supplied by the
+surrounding build is found — and falls back to this library's own class loader. Resolution happens
+without running the class's static initializers, and the class is only instantiated after it has
+been verified to implement `Parser`; anything else fails with an `IllegalStateException`.
 
 ## Architecture
 
-- **Parser:** Reads local files and constructs a page hierarchy (`AntoraParser`).
+- **Parser:** Reads local files and constructs a page hierarchy. `AntoraParser` is the built-in implementation of the `Parser` interface; the implementation is selectable via `parserClass`.
+- **LinkResolver:** Builds an index over the page trees of all mappers so internal and cross-space links can be resolved by title and space key.
 - **Transformer:** Converts HTML/AsciiDoc content into Confluence Storage Format (`ConfluenceTransformer`).
 - **Client:** Handles REST API communication with Confluence (`ConfluenceClient`).
 

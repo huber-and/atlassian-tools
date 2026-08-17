@@ -10,26 +10,49 @@ actor User
 participant Publisher
 participant Configuration
 participant Parser
+participant LinkResolver
 participant Transformer
 participant ConfluenceClient
 participant ConfluenceAPI
 
 User -> Publisher: new Publisher(config)
-Publisher -> Publisher: Initialize parser\n(AntoraParser)
-Publisher -> Publisher: Initialize client\n(ConfluenceClient)
+Publisher -> Configuration: getParserClass()
+Configuration --> Publisher: class name (default: AntoraParser)
+Publisher -> Publisher: load class without initializing it,\nverify it implements Parser
+note right of Publisher
+  A class that is unknown or does not
+  implement Parser is rejected before
+  it is instantiated
+end note
+Publisher -> Parser: new instance + init(config)
 
 User -> Publisher: publish()
 Publisher -> Configuration: getMappers()
 Configuration --> Publisher: List<Mapper>
 
+group Phase 1: parse every mapper
+  loop For each mapper
+    Publisher -> Parser: resolvePages(path)
+    Parser --> Publisher: List<Page> (hierarchy)
+
+    Publisher -> Publisher: dump(pages) [logging]
+  end
+end
+
+note over Publisher, LinkResolver
+  Cross-space links can only be resolved
+  once the page trees of all mappers are known
+end note
+
+Publisher -> LinkResolver: of(MapperPages per mapper)
+LinkResolver --> Publisher: link index
+Publisher -> Transformer: new ConfluenceTransformer(resolver)
+Publisher -> ConfluenceClient: new ConfluenceClient(config, parser, transformer)
+
+group Phase 2: publish every mapper
 loop For each mapper
-  Publisher -> Parser: resolvePages(path)
-  Parser --> Publisher: List<Page> (hierarchy)
-  
-  Publisher -> Publisher: dump(pages) [logging]
-  
   Publisher -> ConfluenceClient: updatePages(mapper, pages)
-  
+
   ConfluenceClient -> ConfluenceAPI: getSpaces(spaceKey)
   ConfluenceAPI --> ConfluenceClient: Space info
   
@@ -45,10 +68,12 @@ loop For each mapper
   loop For each page
     ConfluenceClient -> Parser: loadContent(page)
     Parser --> ConfluenceClient: Element (HTML)
-    
+
     ConfluenceClient -> Transformer: transform(page, content)
+    Transformer -> LinkResolver: resolve(currentPage, href)
+    LinkResolver --> Transformer: Target (page, anchor,\nattachment, external, unresolved)
     Transformer --> ConfluenceClient: Result (storage format)
-    
+
     ConfluenceClient -> ConfluenceAPI: updatePage(pageId, body)
     ConfluenceAPI --> ConfluenceClient: Updated page
     
@@ -64,6 +89,18 @@ loop For each mapper
       ConfluenceClient -> ConfluenceClient: createOrUpdatePage(child, parentId)
     end
   end
+
+  opt if root page configured
+    ConfluenceClient -> ConfluenceAPI: getDescendants(rootId)
+    ConfluenceAPI --> ConfluenceClient: List<DescendantsResponse>
+    ConfluenceClient -> ConfluenceClient: findOrphans(descendants, touched)
+    alt deleteOrphans enabled
+      ConfluenceClient -> ConfluenceAPI: trashPage(orphanId)
+    else deleteOrphans disabled
+      ConfluenceClient -> ConfluenceClient: report orphans in the log only
+    end
+  end
+end
 end
 
 @enduml

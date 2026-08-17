@@ -22,6 +22,8 @@ package "Wiki Publisher" {
     interface [Parser] as parser_iface
     component [AntoraParser] as antora_parser
 
+    component [LinkResolver] as link_resolver
+
     interface [Transformer] as transformer_iface
     component [ConfluenceTransformer] as confluence_transformer
   }
@@ -35,7 +37,8 @@ package "Wiki Publisher" {
 }
 
 pub --> config: uses
-pub --> parser_iface: uses
+pub ..> parser_iface: resolves implementation\nfrom Configuration.parserClass
+pub --> link_resolver: builds page index
 pub --> client: delegates to
 
 client --> config: uses
@@ -53,6 +56,7 @@ antora_parser --> config: uses
 transformer_iface <|-- confluence_transformer: implements
 confluence_transformer --> page: processes
 confluence_transformer --> attachment: extracts
+confluence_transformer --> link_resolver: resolves internal links
 
 page --> attachment: contains
 

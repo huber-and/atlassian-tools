@@ -12,22 +12,37 @@ start
 :Load Configuration;
 
 :Initialize Publisher
-  - Create Parser (AntoraParser)
-  - Create ConfluenceClient;
+  - Resolve Parser class from parserClass
+    (without initializing it)
+  - Reject anything that is not a Parser
+  - Instantiate and call init(config);
 
-:For each configured Space Mapper;
+partition "Phase 1: parse" {
+  :For each configured Space Mapper;
 
-:Parse Source Documentation
-  - Read index.html
-  - Extract page hierarchy;
+  :Parse Source Documentation
+    - Read index.html
+    - Extract page hierarchy;
 
-:Resolve Pages
-  - Create Page tree structure
-  - Load page source paths;
+  :Resolve Pages
+    - Create Page tree structure
+    - Load page source paths;
 
-:Log Page Hierarchy;
+  :Log Page Hierarchy;
 
-:For each Page (recursively);
+  :Next mapper;
+}
+
+:Build Link Index
+  - Combine the page trees of all mappers
+  - Enables cross-space links by title and space key;
+
+:Create ConfluenceTransformer and ConfluenceClient;
+
+partition "Phase 2: publish" {
+  :For each configured Space Mapper;
+
+  :For each Page (recursively);
 
 :Get or Create Page in Confluence
   - Check if exists
@@ -37,6 +52,8 @@ start
 
 :Transform Content
   - Parse HTML
+  - Resolve internal links via the link index
+  - Convert admonitions and code blocks
   - Convert to Confluence storage format
   - Extract attachments;
 
@@ -52,7 +69,13 @@ start
 
 :End of page processing;
 
-:Next mapper;
+  :Clean Up Orphans
+    - Find pages below root that no longer exist locally
+    - Move to trash, or report only
+      when deleteOrphans is disabled;
+
+  :Next mapper;
+}
 
 :End of publisher;
 
