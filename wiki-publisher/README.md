@@ -1,5 +1,8 @@
 # Wiki Publisher
 
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.huber-and.atlassian/wiki-publisher?label=Maven%20Central)](https://mvnrepository.com/artifact/io.github.huber-and.atlassian/wiki-publisher)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](../LICENSE)
+
 **Wiki Publisher** is a Java library designed to automate the publishing of documentation to Atlassian Confluence. It specifically supports parsing content structured for Antora and transforming it for Confluence's storage format.
 
 > **Live example:** this plugin publishes its own project's architecture documentation.

@@ -1,5 +1,8 @@
 # Atlassian Tools Maven Plugin
 
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.huber-and.atlassian/atlassian-maven-plugin?label=Maven%20Central)](https://mvnrepository.com/artifact/io.github.huber-and.atlassian/atlassian-maven-plugin)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](../LICENSE)
+
 The **Atlassian Tools Maven Plugin** integrates Confluence page publishing directly into your Maven build lifecycle. It allows you to automate the process of publishing documentation to Confluence spaces based on your project's content.
 
 > **Live example:** this plugin publishes its own project's architecture documentation.

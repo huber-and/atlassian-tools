@@ -1,5 +1,10 @@
 # Atlassian Tools
 
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.huber-and.atlassian/atlassian-maven-plugin?label=Maven%20Central)](https://mvnrepository.com/artifact/io.github.huber-and.atlassian/atlassian-maven-plugin)
+[![Build](https://img.shields.io/github/actions/workflow/status/huber-and/atlassian-tools/build.yml?branch=main&label=build)](https://github.com/huber-and/atlassian-tools/actions/workflows/build.yml)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Java](https://img.shields.io/badge/Java-21%2B-orange)](https://adoptium.net/)
+
 A comprehensive suite of Java tools and libraries designed to streamline integration with Atlassian Confluence. This project provides a robust REST API client, a powerful HTML publishing utility, and a Maven plugin to automate your documentation workflow.
 
 ## Same source, both targets
