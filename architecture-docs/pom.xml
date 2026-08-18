@@ -77,7 +77,7 @@
 					<serverId>${private.wiki.serverId}</serverId>
 					<mappers>
 						<mapper>
-							<spaceKey>arc42sample</spaceKey>
+							<spaceKey>AT</spaceKey>
 							<root>Architecture</root>
 							<path>${project.basedir}/target/docs/docs/main</path>
 						</mapper>

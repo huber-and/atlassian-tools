@@ -27,7 +27,7 @@ That is the source the publisher consumes.
 
 == Copyright and Licences
 
-The content of this documentation is © 2024-2026 Andreas Huber and is published under the
+The content of this documentation is © 2025-2026 Andreas Huber and is published under the
 https://www.apache.org/licenses/LICENSE-2.0[Apache License 2.0], like the software it describes.
 
 The document *structure* — the twelve chapters and their intent — is the
