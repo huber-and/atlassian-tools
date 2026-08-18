@@ -23,6 +23,9 @@
 *.iws
 .vscode/
 
+# Local tooling caches
+.codegraph/
+
 # Local secrets / overrides
 .env
 .env.local
