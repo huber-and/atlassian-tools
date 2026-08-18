@@ -93,6 +93,17 @@ ifndef::imagesdir[:imagesdir: ../images]
   to be updated at every release.
 | Snippets drift out of date silently. Mitigated by a Maven Central badge next to them, but the
   snippet itself still needs the manual edit.
+
+| D6
+| *The OpenSSF Scorecard Branch-Protection check caps out at Tier 1 (3/10).* Higher tiers require a
+  pull request with at least one approving review, and GitHub does not let an author approve their
+  own pull request — there is no configuration that overrides this. Satisfying it for real needs a
+  second collaborator with write access; satisfying it on paper needs a bypass exception, which
+  makes the requirement not apply to the one person who pushes.
+| Accepted rather than worked around, as a direct consequence of OC3
+  (xref:02_architecture_constraints.adoc[]). The alternative — requiring pull requests
+  and routinely bypassing the review requirement — would trade real workflow friction for
+  a score that does not reflect an actual second set of eyes.
 |===
 
 WARNING: R1 and R2 are the two risks that can break the tool without any change on this side. Both
