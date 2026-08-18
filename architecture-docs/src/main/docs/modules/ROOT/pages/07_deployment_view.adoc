@@ -131,11 +131,30 @@ a `<server id="confluence">` entry whose values come from the environment, and t
 it is confidential (a Confluence cloud id is served unauthenticated from
 `/_edge/tenant_info`) but to keep all three connection values in one place.
 
-IMPORTANT: Which URL form works depends on the account. A regular user account authenticates
-against the site form `https://<site>.atlassian.net/wiki`. A *service account* has to use the
-cloud-id form `+https://api.atlassian.com/ex/confluence/<cloudId>/wiki+`; the site form does not
-work for it. The cloud id can be read from `https://<site>.atlassian.net/_edge/tenant_info`.
-Since CI publishes with a service account, that is the form the `CONFLUENCE_URL` secret holds.
+[IMPORTANT]
+====
+Which URL form works depends on the *token type*, not on the account type:
+
+* A *classic* API token authenticates against the site form
+  `https://<site>.atlassian.net/wiki`.
+* A *scoped* API token must use the platform API gateway,
+  `+https://api.atlassian.com/ex/confluence/<cloudId>/wiki+`. Atlassian documents the site form as
+  explicitly not working for scoped tokens.
+
+Service accounts can only create scoped tokens, so for them the gateway form is the only option —
+which is why the `CONFLUENCE_URL` secret holds that form. A normal user account issuing a scoped
+token is bound by the same rule.
+
+The cloud id is not confidential; read it from `https://<site>.atlassian.net/_edge/tenant_info`.
+
+Basic authentication keeps working: the account e-mail as the user and the token as the password.
+A `Bearer` header would work too, but the publisher uses basic auth.
+
+Scoped tokens also need the right *scopes*. Beyond reading spaces and reading and writing pages,
+this publisher needs attachment access, content-property access for its content hash, and — if
+`deleteOrphans` stays enabled — permission to delete pages. A token missing one of them fails at
+exactly the operation that needs it, not at connect time.
+====
 
 The workflow also triggers on changes to `wiki-publisher`, `wiki-client` and the Maven plugin, not
 just on documentation changes: a change to the publisher changes the *result* in Confluence even

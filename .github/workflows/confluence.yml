@@ -5,9 +5,12 @@
 # reasons (credentials, permissions, API limits).
 #
 # Required repository secrets:
-#   CONFLUENCE_URL        the Confluence base URL, either the site form
-#                         https://<site>.atlassian.net/wiki or the cloud-id form
-#                         https://api.atlassian.com/ex/confluence/<cloudId>/wiki
+#   CONFLUENCE_URL        the Confluence base URL. A classic API token uses the site form
+#                         https://<site>.atlassian.net/wiki; a scoped token — the only kind a
+#                         service account can create — must use the gateway form
+#                         https://api.atlassian.com/ex/confluence/<cloudId>/wiki, and needs
+#                         scopes covering pages, attachments, content properties and, while
+#                         deleteOrphans is enabled, page deletion.
 #   CONFLUENCE_USERNAME   the Atlassian account e-mail
 #   CONFLUENCE_API_TOKEN  API token from id.atlassian.com
 #
