@@ -71,11 +71,13 @@ jobs:
 
       # Only the three Java modules: architecture-docs is a documentation
       # module built with Antora/Node, irrelevant to CodeQL and only slower
-      # to include. compile is enough to materialize the generated sources —
-      # tests are not needed for analysis.
-      - name: Build the Java modules
+      # to include. test-compile (not compile) is required: build-mode: manual
+      # only sees what actually gets compiled during this step, and test
+      # sources are source code too. Running the tests themselves is not
+      # needed for analysis, only compiling them.
+      - name: Build the Java modules, including tests
         run: >
-          ./mvnw -B -pl wiki-client,wiki-publisher,maven-plugin -am compile
+          ./mvnw -B -pl wiki-client,wiki-publisher,maven-plugin -am test-compile
           -Dgpg.skip=true
           -Dmaven.javadoc.skip=true
           -Dmaven.source.skip=true
