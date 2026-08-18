@@ -1,0 +1,60 @@
+# Runs the OpenSSF Scorecard and uploads the result to the repository's code
+# scanning view, next to the CodeQL findings.
+#
+# Action refs are pinned to commit SHAs, not tags. Scorecard's own Pinned-Dependencies
+# check rewards that, and a tag can be moved to point at different code while a SHA
+# cannot — which matters more here than elsewhere, because this workflow runs with
+# security-events: write.
+#
+# publish_results: true sends the result to the public Scorecard API, which is what
+# makes the badge and the REST API work. The score is computed from public repository
+# data either way, so nothing is disclosed that could not be derived.
+
+name: OpenSSF Scorecard
+
+on:
+  push:
+    branches: [ "main" ]
+  # Weekly, so the score keeps up with changes outside the repository — an
+  # unmaintained dependency or a new advisory moves it without a commit here.
+  schedule:
+    - cron: '30 1 * * 6'
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    permissions:
+      # Needed to upload the SARIF result to code scanning.
+      security-events: write
+      # Needed by publish_results to obtain GitHub's OIDC token, which proves the
+      # result really comes from this repository.
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run analysis
+        uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc # v2.4.4
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: SARIF file
+          path: results.sarif
+          retention-days: 5
+
+      - name: Upload to code scanning
+        uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
+        with:
+          sarif_file: results.sarif
