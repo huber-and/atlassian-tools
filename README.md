@@ -2,6 +2,19 @@
 
 A comprehensive suite of Java tools and libraries designed to streamline integration with Atlassian Confluence. This project provides a robust REST API client, a powerful HTML publishing utility, and a Maven plugin to automate your documentation workflow.
 
+## Same source, both targets
+
+This project's own architecture documentation is written once in AsciiDoc and published to two
+places by the tools in this repository. Chapter 5 in both, side by side:
+
+| Antora site | Confluence |
+| :---: | :---: |
+| [![Chapter 5 of the architecture documentation on the generated Antora site](.github/images/antora-site.png)](https://huber-and.github.io/atlassian-tools) | [![The same chapter published as a Confluence page, with the page tree in the sidebar](.github/images/confluence-space.png)](https://the-hubers.atlassian.net/wiki/spaces/AT/pages/65437698/Architecture) |
+| **[Open the site →](https://huber-and.github.io/atlassian-tools)** | **[Open it in Confluence →](https://the-hubers.atlassian.net/wiki/spaces/AT/pages/65437698/Architecture)** |
+
+Navigation becomes a page tree, the diagram becomes an attachment, internal links keep working —
+and pages whose content has not changed are left untouched, so the page history stays readable.
+
 ## Project Modules
 
 This multi-module Maven project consists of the following components:
@@ -41,8 +54,7 @@ The architecture documentation of this project, written in AsciiDoc following th
 `atlassian-maven-plugin` itself — so it doubles as the end-to-end example of how to use the plugin.
 - Build the site: `mvn -pl architecture-docs clean compile`
 - Publish to Confluence: `mvn -pl architecture-docs clean compile atlassian:publish`
-- Published to GitHub Pages automatically by `.github/workflows/pages.yml`
-- Both targets are public, so source, generated site and published pages can be compared side by side
+- Published to GitHub Pages by `.github/workflows/pages.yml` and to Confluence by `.github/workflows/confluence.yml`, both on push
 
 ## Requirements
 
