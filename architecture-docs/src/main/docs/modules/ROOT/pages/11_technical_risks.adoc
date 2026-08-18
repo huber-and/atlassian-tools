@@ -61,10 +61,14 @@ ifndef::imagesdir[:imagesdir: ../images]
 | ID | Debt | Consequence
 
 | D1
-| *No automated end-to-end test.* The tests covering a live Confluence instance are local
-  integration tests (`*TestLocal`), excluded from the repository and from CI.
-| Regressions in the actual API interaction are only caught by running the sample by hand. The
-  publishing workflow itself — `updatePages`, `syncPageStructure` — has no covering test.
+| *No automated end-to-end assertion.* `confluence.yml` publishes this documentation to a real
+  space on every relevant push, so the API interaction is exercised continuously — but nothing
+  asserts the *result*. The build fails only when the publisher throws, not when it writes
+  something wrong. The tests covering a live instance remain local integration tests
+  (`*TestLocal`), excluded from the repository and from CI.
+| A regression that produces valid-but-wrong output — a mangled link, a lost admonition — passes
+  CI unnoticed and is only found by looking at the space. `updatePages` and `syncPageStructure`
+  still have no covering unit test.
 
 | D2
 | *Maven is the only entry point.* `wiki-publisher` is Maven-free by design, but no CLI, Docker

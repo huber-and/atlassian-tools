@@ -72,6 +72,10 @@ Three artifacts are published to Maven Central under the group
 | `pages.yml`
 | Push on `main` touching `architecture-docs/`
 | Builds this documentation with Antora and deploys it to GitHub Pages.
+
+| `confluence.yml`
+| Push on `main` touching `architecture-docs/` or any published module
+| Builds all modules and publishes this documentation to the Confluence space.
 |===
 
 The version is assembled from `+${revision}${changelist}+` (CI friendly versions). A release build
@@ -107,7 +111,8 @@ the repository is not yet configured.
 
 === To Confluence
 
-The same source, published by the system itself:
+The same source, published by the system itself. The result is public — https://the-hubers.atlassian.net/wiki/spaces/AT/pages/65437698/Architecture[the Architecture space] —
+which makes the Antora site and the Confluence pages directly comparable:
 
 [source,bash]
 ----
@@ -118,10 +123,30 @@ mvn -pl architecture-docs clean compile atlassian:publish
 picks it up and pushes it into the configured space. Both steps live in the same POM, so the
 published state can never be newer or older than the built site.
 
+In CI the same two steps run in `confluence.yml`, with one constraint that shapes the whole
+workflow: `username` and `password` have no CLI property, so credentials cannot be passed as `-D`
+arguments — see xref:08_concepts.adoc[]. `setup-java` therefore writes a `settings.xml` containing
+a `<server id="confluence">` entry whose values come from the environment, and the build points
+`serverId` at that entry. The connection URL is kept as a repository secret as well — not because
+it is confidential (a Confluence cloud id is served unauthenticated from
+`/_edge/tenant_info`) but to keep all three connection values in one place.
+
+IMPORTANT: Which URL form works depends on the account. A regular user account authenticates
+against the site form `https://<site>.atlassian.net/wiki`. A *service account* has to use the
+cloud-id form `+https://api.atlassian.com/ex/confluence/<cloudId>/wiki+`; the site form does not
+work for it. The cloud id can be read from `https://<site>.atlassian.net/_edge/tenant_info`.
+Since CI publishes with a service account, that is the form the `CONFLUENCE_URL` secret holds.
+
+The workflow also triggers on changes to `wiki-publisher`, `wiki-client` and the Maven plugin, not
+just on documentation changes: a change to the publisher changes the *result* in Confluence even
+when the source stays the same. Because unchanged pages are skipped by their content hash, such a
+run is cheap — and it doubles as a continuous integration test of the publisher against a real
+Confluence instance, which is the gap listed as D1 in xref:11_technical_risks.adoc[].
+
 [source,xml]
 ----
 <mapper>
-    <spaceKey>arc42sample</spaceKey>
+    <spaceKey>AT</spaceKey>
     <root>Architecture</root>
     <path>${project.basedir}/target/docs/docs/main</path>
 </mapper>
