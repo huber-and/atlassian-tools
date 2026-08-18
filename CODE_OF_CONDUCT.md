@@ -11,8 +11,12 @@ under constraints you cannot see.
 ## Reporting
 
 If someone's behaviour in this project's issues, pull requests or discussions is unacceptable,
-report it to the maintainer at **andreas.huber@iot-invent.com**. Reports are handled confidentially.
+report it to the maintainer. The repository's
+[private reporting form](https://github.com/huber-and/atlassian-tools/security/advisories/new) is
+the only channel here that nobody but the maintainer can read, so it serves for conduct reports as
+well — just say that the report is about conduct rather than a vulnerability. Reports are handled
+confidentially.
 
 This is a single-maintainer project, so the person receiving a report is also the person acting on
-it. If the report concerns the maintainer, the escalation path is
-[GitHub Support](https://support.github.com/contact/report-abuse), which can act independently.
+it. If the report concerns the maintainer, [GitHub Support](https://support.github.com/contact/report-abuse)
+can act independently of this repository.
