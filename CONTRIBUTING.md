@@ -27,6 +27,8 @@ keeps the library usable outside a Maven build.
 
 ## Tests
 
+New functionality gets a test in the same pull request — a feature without one is not considered done. `parserClass`, `deleteOrphans` and the link resolver each landed with tests covering the new behaviour; that is the standard to match, not a discussion point.
+
 `./mvnw test` runs the full suite. It needs no network and no Confluence instance.
 
 Tests whose name ends in `TestLocal` are integration tests against a live Confluence instance or a

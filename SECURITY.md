@@ -25,8 +25,8 @@ can be turned into a published advisory once a fix is available.
 What helps in a report: the affected version, the configuration involved, and what an attacker
 would gain. A proof of concept is welcome but not required.
 
-What to expect: an acknowledgement within a few days, and an honest assessment of when a fix can
-happen. This is a single-maintainer project without a paid support commitment — if something is
+What to expect: an acknowledgement within 14 days at the latest, and an honest assessment of when
+a fix can happen. This is a single-maintainer project without a paid support commitment — if something is
 urgent for you, say so in the report.
 
 Please do not disclose the issue publicly until a fixed version is released, or until we agree
