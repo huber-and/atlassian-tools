@@ -35,13 +35,14 @@ A Maven plugin that brings the power of the `wiki-publisher` directly into your 
   - Secure credential management via Maven `settings.xml`.
 
 ### 4. `architecture-docs`
-**Architecture Documentation** — 📖 [read it online](https://huber-and.github.io/atlassian-tools)
+**Architecture Documentation** — 📖 [read the site](https://huber-and.github.io/atlassian-tools) · 🔗 [see it published in Confluence](https://the-hubers.atlassian.net/wiki/spaces/AT/pages/65437698/Architecture)
 The architecture documentation of this project, written in AsciiDoc following the
 [arc42](https://arc42.org/) template, built into an Antora site and published to Confluence by
 `atlassian-maven-plugin` itself — so it doubles as the end-to-end example of how to use the plugin.
 - Build the site: `mvn -pl architecture-docs clean compile`
 - Publish to Confluence: `mvn -pl architecture-docs clean compile atlassian:publish`
 - Published to GitHub Pages automatically by `.github/workflows/pages.yml`
+- Both targets are public, so source, generated site and published pages can be compared side by side
 
 ## Requirements
 

@@ -1,7 +1,9 @@
 site:
   title: Atlassian Tools — Architecture
   start_page: docs::index.adoc
-  url: https://the-hubers.atlassian.net/wiki/spaces/arc42sample
+  # Deliberately no site.url here. Antora derives canonical and sitemap URLs from it, and a
+  # Confluence space URL produces nonsense like .../spaces/AT/docs/main/page.html. The link to
+  # the published space lives in the footer instead. playbook.yml sets the real URL for Pages.
 content:
   edit_url: ~
   sources:

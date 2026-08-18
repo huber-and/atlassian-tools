@@ -2,6 +2,10 @@
 
 **Wiki Publisher** is a Java library designed to automate the publishing of documentation to Atlassian Confluence. It specifically supports parsing content structured for Antora and transforming it for Confluence's storage format.
 
+> **Live example:** this plugin publishes its own project's architecture documentation.
+> Compare the [generated Antora site](https://huber-and.github.io/atlassian-tools) with the
+> [resulting Confluence pages](https://the-hubers.atlassian.net/wiki/spaces/AT/pages/65437698/Architecture) — same source, both targets, publicly readable.
+
 ## Features
 
 - **Automated Publishing:** seamless integration to publish local documentation to Confluence.

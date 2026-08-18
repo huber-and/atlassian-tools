@@ -2,6 +2,10 @@
 
 The **Atlassian Tools Maven Plugin** integrates Confluence page publishing directly into your Maven build lifecycle. It allows you to automate the process of publishing documentation to Confluence spaces based on your project's content.
 
+> **Live example:** this plugin publishes its own project's architecture documentation.
+> Compare the [generated Antora site](https://huber-and.github.io/atlassian-tools) with the
+> [resulting Confluence pages](https://the-hubers.atlassian.net/wiki/spaces/AT/pages/65437698/Architecture) — same source, both targets, publicly readable.
+
 ## Features
 
 - **Automated Publishing:** Publish documentation to Confluence as part of your build.
