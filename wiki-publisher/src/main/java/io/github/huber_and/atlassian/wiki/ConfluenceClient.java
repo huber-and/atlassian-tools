@@ -104,6 +104,15 @@ public class ConfluenceClient {
 	/** Page size used for the cursor-based descendant and attachment queries. */
 	private static final int PAGE_SIZE = 250;
 
+	/**
+	 * Headers required by the v1 attachment upload.
+	 *
+	 * The endpoint accepts {@code multipart/form-data} and is therefore guarded
+	 * against XSRF: Confluence rejects the request unless
+	 * {@code X-Atlassian-Token: nocheck} is present.
+	 */
+	private static final Map<String, String> XSRF_HEADERS = Map.of("X-Atlassian-Token", "nocheck");
+
 	/** Configuration containing Confluence credentials and settings. */
 	private final Configuration config;
 
@@ -665,11 +674,28 @@ public class ConfluenceClient {
 				.toList();
 	}
 
+	/**
+	 * Uploads an attachment, creating it or adding a new version.
+	 *
+	 * This is the only call that still goes through the v1 API: REST API v2 offers
+	 * no endpoint for creating attachments — its attachment resources are read-only
+	 * apart from properties. Atlassian tracks the gap as CONFCLOUD-77196, which sits
+	 * in "Future Consideration" without an assignee or ETA (as of July 2026), so
+	 * {@code PUT /rest/api/content/{id}/child/attachment} remains the only option.
+	 * That v1 operation is not marked as deprecated.
+	 *
+	 * The upload is flagged as a minor edit so that republishing unchanged content
+	 * does not notify watchers on every build.
+	 *
+	 * @param contentId  the ID of the page to attach the file to
+	 * @param attachment the attachment to upload
+	 * @param hash       the SHA-256 hash of the file, stored as the comment
+	 */
 	private void createOrUpdateAttachment(final String contentId, final Attachment attachment, final String hash) {
 		try {
 			Utils.retry(() -> {
-				attachmentsApi.createOrUpdateAttachments(contentId, attachment.getSource().toFile(), "binary",
-						"current", attachmentComment(hash));
+				attachmentsApi.createOrUpdateAttachments(contentId, attachment.getSource().toFile(), "true", "current",
+						attachmentComment(hash), XSRF_HEADERS);
 				return null;
 			}, 1);
 		} catch (final Exception e) {
