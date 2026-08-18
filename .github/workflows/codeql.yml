@@ -1,0 +1,86 @@
+# Advanced-setup CodeQL, replacing the GitHub-managed Default Setup.
+#
+# Default Setup uses build-mode: none for Java, which analyzes only the source
+# files already on disk — it never runs a build. wiki-client's REST v2 client
+# (PageApi, SpaceApi, ContentPropertiesApi, the models) is entirely generated
+# by openapi-generator during `generate-sources` and is not checked into git,
+# so under build-mode: none that code does not exist yet and CodeQL never sees
+# it — the module that actually speaks HTTP to Confluence goes unanalyzed.
+# build-mode: manual runs a real (partial) build first, so the generated
+# sources exist before CodeQL extracts them.
+#
+# This also fixes a Scorecard SAST-check gap: the check looks for
+# `github/codeql-action` in a committed workflow file, or for CodeQL/SonarCloud
+# annotations on recent merged pull requests. Default Setup has no committed
+# workflow file, and this project has no merged PRs (direct pushes to main),
+# so neither signal was present.
+#
+# One-time repository setting required: Settings > Code security > Code
+# scanning > CodeQL analysis > disable Default Setup (or "Switch to advanced").
+# Advanced-setup uploads are rejected while Default Setup is still active.
+
+name: CodeQL
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '15 3 * * 2'
+  workflow_dispatch:
+
+permissions: read-all
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: java-kotlin
+            build-mode: manual
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.0.0
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      # Only the three Java modules: architecture-docs is a documentation
+      # module built with Antora/Node, irrelevant to CodeQL and only slower
+      # to include. compile is enough to materialize the generated sources —
+      # tests are not needed for analysis.
+      - name: Build the Java modules
+        run: >
+          ./mvnw -B -pl wiki-client,wiki-publisher,maven-plugin -am compile
+          -Dgpg.skip=true
+          -Dmaven.javadoc.skip=true
+          -Dmaven.source.skip=true
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
+        with:
+          category: "/language:${{ matrix.language }}"
