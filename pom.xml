@@ -26,6 +26,7 @@
 		<maven-plugin.version>3.9.0</maven-plugin.version>
 		<source.plugin.version>3.4.0</source.plugin.version>
 		<surefire.plugin.version>3.5.6</surefire.plugin.version>
+		<compiler.plugin.version>3.15.0</compiler.plugin.version>
 		<jacoco.plugin.version>0.8.15</jacoco.plugin.version>
 		<maven-plugin-tools.version>3.15.2</maven-plugin-tools.version>
 		<central-publishing.plugin.version>0.11.0</central-publishing.plugin.version>
@@ -168,6 +169,19 @@
 						</goals>
 					</execution>
 				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${compiler.plugin.version}</version>
+				<configuration>
+					<!-- Verified clean across all three Java modules, including the OpenAPI-generated
+					     client, before enabling: zero warnings under -Xlint:all as of this change. -->
+					<compilerArgs>
+						<arg>-Xlint:all,-options,-processing</arg>
+					</compilerArgs>
+					<failOnWarning>true</failOnWarning>
+				</configuration>
 			</plugin>
 			<plugin>
 				<groupId>org.jacoco</groupId>

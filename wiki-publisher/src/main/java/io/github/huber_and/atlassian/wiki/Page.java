@@ -32,7 +32,7 @@ import lombok.Getter;
  * @author Andreas Huber
  */
 @Getter
-public class Page {
+public final class Page {
 
 	/** The title of the page. */
 	private final String title;
