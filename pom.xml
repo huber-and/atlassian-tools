@@ -26,6 +26,7 @@
 		<maven-plugin.version>3.9.0</maven-plugin.version>
 		<source.plugin.version>3.4.0</source.plugin.version>
 		<surefire.plugin.version>3.5.6</surefire.plugin.version>
+		<jacoco.plugin.version>0.8.15</jacoco.plugin.version>
 		<maven-plugin-tools.version>3.15.2</maven-plugin-tools.version>
 		<central-publishing.plugin.version>0.11.0</central-publishing.plugin.version>
 		<openapi-generator.plugin.version>7.24.0</openapi-generator.plugin.version>
@@ -164,6 +165,34 @@
 						<phase>verify</phase>
 						<goals>
 							<goal>sign</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>${jacoco.plugin.version}</version>
+				<configuration>
+					<!-- wiki-client is generated from Atlassian's OpenAPI specification and has
+					     no hand-written logic to cover; measuring it would only dilute the
+					     number for the code that is actually maintained here. -->
+					<excludes>
+						<exclude>net/atlassian/wiki/rest/**</exclude>
+					</excludes>
+				</configuration>
+				<executions>
+					<execution>
+						<id>prepare-agent</id>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>report</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>report</goal>
 						</goals>
 					</execution>
 				</executions>
