@@ -1,0 +1,139 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[section-quality-scenarios]]
+= 10. Quality Requirements
+
+== Quality Tree
+
+....
+  Usability
+  ├── Q1  Publishing is a build step, no manual work
+  └── Q2  Published pages look native in Confluence
+
+  Reliability
+  ├── Q3  Idempotence: no write without a content change
+  ├── Q4  Partial failure does not abort the build
+  └── Q5  Transient API failures are retried
+
+  Security
+  ├── Q6  Credentials never appear in build output
+  ├── Q7  Paths from HTML cannot escape the site directory
+  └── Q8  Deletion cannot leave the configured subtree
+
+  Analysability
+  ├── Q9  The log answers what happened to the space
+  └── Q10 Unresolvable links are reported, not hidden
+
+  Modifiability
+  ├── Q11 A new source format needs no change to the core
+  └── Q12 The domain core is usable without Maven
+....
+
+== Quality Scenarios
+
+=== Reliability
+
+[options="header",cols="1,2,2"]
+|===
+| ID | Stimulus | Expected reaction
+
+| Q3
+| `mvn atlassian:publish` runs twice, source unchanged
+| The second run creates no page version. The page history shows one entry, the log reports the
+  pages as unchanged.
+
+| Q3a
+| A single character changes in one page of fifty
+| Exactly one page is updated. The other 49 keep their version.
+
+| Q4
+| One of three configured spaces is unreachable
+| The other two are published completely. The build fails at the end with the space key of the
+  failed mapper.
+
+| Q4a
+| One page's source HTML is malformed
+| The page is logged with a stack trace, the remaining pages of the mapper are published, the
+  mapper is reported as failed.
+
+| Q5
+| Confluence answers one request with a transient error
+| The request is retried once. Only a second failure counts as a failure.
+|===
+
+=== Security
+
+[options="header",cols="1,2,2"]
+|===
+| ID | Stimulus | Expected reaction
+
+| Q6
+| A build runs with debug logging in a public CI job
+| No log line contains the password or the username. Only the host of the target URL appears,
+  never the full URL.
+
+| Q6a
+| A developer tries `-Dpassword=…` on the command line
+| The parameter does not exist. Credentials can only come from the configuration or
+  `settings.xml`.
+
+| Q7
+| A page contains `<img src="../../../etc/passwd">`
+| The reference is dropped with a warning `Removing unsafe image src …`. The page is published
+  without it.
+
+| Q8
+| `root` is not configured and pages were deleted locally
+| Orphan detection is skipped and says so in the log. Nothing is deleted.
+
+| Q8a
+| `deleteOrphans` is enabled and a page vanished locally
+| The page is moved to the trash, not purged, and can be restored in Confluence.
+
+| Q8b
+| A class name pointing at an arbitrary class is configured as `parserClass`
+| The class is not initialized and not instantiated. The build fails with `does not implement
+  io.github.huber_and.atlassian.wiki.parser.Parser`.
+|===
+
+=== Analysability
+
+[options="header",cols="1,2,2"]
+|===
+| ID | Stimulus | Expected reaction
+
+| Q9
+| A reader asks which parser produced a published space
+| The log line `Using parser …` names the implementation on `info` level.
+
+| Q10
+| A page links to a chapter that was removed
+| The link text survives, the link is dropped, and the page's link report counts it as
+  unresolved.
+
+| Q10a
+| An operator wants to know what enabling `deleteOrphans` would remove
+| A run with `deleteOrphans=false` lists every affected page as `Would move to trash: …`.
+|===
+
+=== Modifiability
+
+[options="header",cols="1,2,2"]
+|===
+| ID | Stimulus | Expected reaction
+
+| Q11
+| A team publishes Markdown-generated HTML instead of Antora
+| They implement `Parser`, add it to the plugin classpath and set `parserClass`. No change to
+  `wiki-publisher`.
+
+| Q12
+| An application wants to publish without Maven
+| It depends on `wiki-publisher`, builds a `Configuration` and calls `Publisher.publish()`. No
+  Maven artifact is pulled in.
+|===
+
+NOTE: Q3, Q6, Q7 and Q8b are covered by unit tests — the credential exclusions, the path-traversal
+guard and the parser type check each have their own test class. The scenarios that need a live
+Confluence instance are covered by local integration tests that are excluded from CI, which is a
+known gap listed in xref:11_technical_risks.adoc[].

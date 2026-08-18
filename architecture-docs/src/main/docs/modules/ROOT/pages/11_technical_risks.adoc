@@ -1,0 +1,96 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[section-technical-risks]]
+= 11. Risks and Technical Debt
+
+== Risks
+
+[options="header",cols="1,2,2,1"]
+|===
+| ID | Risk | Mitigation | Severity
+
+| R1
+| *The v1 attachment endpoint disappears.* Attachment upload depends on a v1 operation because
+  REST v2 cannot create attachments. If Atlassian retires v1 before closing the gap, attachments
+  break.
+| The operation is not marked deprecated, and the gap is tracked upstream as
+  https://jira.atlassian.com/browse/CONFCLOUD-77196[CONFCLOUD-77196]. The dependency is isolated
+  in one API class, so a replacement is a local change. Watch the issue.
+| high
+
+| R2
+| *Antora's HTML structure changes.* The parser reads the navigation panel via
+  `data-panel="menu"` and `data-depth`, and page content via `article.doc`. These are properties of
+  Antora's default UI, not a documented contract.
+| Pinned Antora and UI bundle versions in the sample. An upgrade shows up immediately as an empty
+  or wrong page tree. `parserClass` allows a replacement parser without touching the core.
+| high
+
+| R3
+| *Page titles must be unique per space.* Confluence identifies pages by title within a space, and
+  the link index is keyed the same way. Two documentation pages with the same title collide.
+| Duplicates surface as pages overwriting each other. Not currently detected or reported —
+  see debt D3.
+| medium
+
+| R4
+| *API rate limits on large spaces.* A first publish of a big site issues many requests in a short
+  window. Confluence Cloud throttles.
+| The content hash keeps subsequent runs small, and requests are retried once. A first run against
+  a very large site remains untested at scale.
+| medium
+
+| R5
+| *Single maintainer.* Bus factor of one, on a tool that other builds may depend on.
+| Apache 2.0, published sources and javadoc on Maven Central, and this documentation. A fork is
+  possible without the maintainer.
+| medium
+
+| R6
+| *Confluence normalises stored content.* If normalisation ever affected what we hash, change
+  detection could produce false positives and rewrite pages.
+| The hash is computed over *our own* transformation output, before sending, so remote
+  normalisation cannot influence it by design.
+| low
+|===
+
+== Technical Debt
+
+[options="header",cols="1,2,2"]
+|===
+| ID | Debt | Consequence
+
+| D1
+| *No automated end-to-end test.* The tests covering a live Confluence instance are local
+  integration tests (`*TestLocal`), excluded from the repository and from CI.
+| Regressions in the actual API interaction are only caught by running the sample by hand. The
+  publishing workflow itself — `updatePages`, `syncPageStructure` — has no covering test.
+
+| D2
+| *Maven is the only entry point.* `wiki-publisher` is Maven-free by design, but no CLI, Docker
+  image or Gradle plugin exists to prove or exploit it.
+| Documentation pipelines that do not use Maven cannot use the tool at all, which is the largest
+  restriction on who can adopt it.
+
+| D3
+| *Duplicate page titles are not detected.* The link index silently keeps one entry per
+  title/space pair.
+| Two pages with the same title in one space overwrite each other without a warning. A check
+  during index construction would turn this into a reported error.
+
+| D4
+| *The OpenAPI specification is patched by hand.* Four `likes/count` response titles must be
+  renamed after every refresh from Atlassian, or the generated sources do not compile.
+| Refreshing the spec is a manual ritual documented only in the `wiki-client` README. A patch file
+  or a generator configuration override would make it reproducible.
+
+| D5
+| *Fixed version numbers in the READMEs.* Installation snippets name a concrete version that has
+  to be updated at every release.
+| Snippets drift out of date silently. Mitigated by a Maven Central badge next to them, but the
+  snippet itself still needs the manual edit.
+|===
+
+WARNING: R1 and R2 are the two risks that can break the tool without any change on this side. Both
+are external contracts that are not versioned as such — which is why both are worth watching
+actively rather than waiting for a bug report.

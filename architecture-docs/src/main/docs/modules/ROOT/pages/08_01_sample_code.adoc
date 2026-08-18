@@ -1,0 +1,123 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[section-sample-code]]
+= 8.1 Sample: A Custom Parser
+
+The examples below are the two ways to drive the system, and a minimal extension.
+
+== Publishing from a Maven build
+
+The normal case. Add the plugin, point a mapper at the generated site, keep credentials in
+`settings.xml`:
+
+[source,xml]
+----
+<plugin>
+    <groupId>io.github.huber-and.atlassian</groupId>
+    <artifactId>atlassian-maven-plugin</artifactId>
+    <version>0.2.2</version>
+    <configuration>
+        <url>https://your-domain.atlassian.net/wiki</url>
+        <serverId>your-domain.atlassian.net</serverId>
+        <mappers>
+            <mapper>
+                <spaceKey>DOCS</spaceKey>
+                <root>Architecture</root>
+                <path>${project.basedir}/target/docs/docs/main</path>
+                <deleteOrphans>false</deleteOrphans>
+            </mapper>
+        </mappers>
+    </configuration>
+</plugin>
+----
+
+TIP: Start with `deleteOrphans=false`. The first run then reports what it *would* remove, which is
+the cheapest way to find out whether the root page is scoped the way you think it is.
+
+== Publishing from plain Java
+
+`wiki-publisher` has no Maven dependency, so it works from any JVM application:
+
+[source,java]
+----
+final var mapper = new Configuration.Mapper();
+mapper.setSpaceKey("DOCS");
+mapper.setRoot("Architecture");
+mapper.setPath("target/docs/docs/main");
+
+final var config = new Configuration();
+config.setUrl("https://your-domain.atlassian.net/wiki");
+config.setUsername("user@example.com");
+config.setPassword(System.getenv("CONFLUENCE_TOKEN"));
+config.setMappers(Set.of(mapper));
+
+new Publisher(config).publish();
+----
+
+CAUTION: Read the token from the environment or a secret store, never from source. The library
+keeps it out of its own log output, but it cannot keep it out of your repository.
+
+== A minimal custom parser
+
+To publish something that is not an Antora site, implement `Parser`. Two methods carry the work:
+`resolvePages` builds the page tree, `loadContent` returns the body of one page.
+
+[source,java]
+----
+public class SingleFileParser implements Parser {
+
+    private Configuration config;
+
+    @Override
+    public void init(final Configuration config) {
+        this.config = config;              // called once, before any other method
+    }
+
+    @Override
+    public List<Page> resolvePages(final Path root) throws IOException {
+        // one flat page per HTML file in the directory
+        try (var files = Files.list(root)) {
+            return files.filter(p -> p.toString().endsWith(".html"))
+                    .map(p -> new Page(titleOf(p), p, null))
+                    .toList();
+        }
+    }
+
+    @Override
+    public Element loadContent(final Page page) throws IOException {
+        return Jsoup.parse(page.getSource(), "UTF-8", "",
+                org.jsoup.parser.Parser.xmlParser()).body();
+    }
+
+    private String titleOf(final Path file) {
+        return StringUtils.capitalize(
+                FilenameUtils.getBaseName(file.toString()).replace('-', ' '));
+    }
+}
+----
+
+Requirements on the class, enforced at runtime:
+
+* it must implement `io.github.huber_and.atlassian.wiki.parser.Parser`,
+* it must have a public no-argument constructor,
+* it must be visible on the plugin's classpath — add it as a `<dependency>` of the plugin
+  declaration, not of the project.
+
+Then name it:
+
+[source,xml]
+----
+<configuration>
+    <parserClass>com.example.docs.SingleFileParser</parserClass>
+</configuration>
+----
+
+Or on the command line, for a one-off run:
+
+[source,bash]
+----
+mvn atlassian:publish -Dpage.parser=com.example.docs.SingleFileParser
+----
+
+IMPORTANT: `parserClass` requires version 0.2.3 or later. In 0.2.2 the parser is fixed to
+`AntoraParser`.

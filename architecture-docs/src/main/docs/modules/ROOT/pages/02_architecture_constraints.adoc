@@ -1,0 +1,83 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[section-architecture-constraints]]
+= 2. Architecture Constraints
+
+== Technical Constraints
+
+[options="header",cols="1,2,3"]
+|===
+| ID | Constraint | Consequence
+
+| TC1
+| Java 21
+| `maven.compiler.source/target` is 21. The code uses records, `var`, switch patterns and
+  `List.getFirst()`, so consumers cannot run on an older JDK.
+
+| TC2
+| Maven 3.9.2 or later
+| Enforced by `maven-enforcer-plugin`. The floor comes from
+  `central-publishing-maven-plugin`, not from our own code.
+
+| TC3
+| Confluence Cloud REST API v2
+| The client is generated from Atlassian's OpenAPI v2 specification. Confluence *Server* and
+  *Data Center* are not supported, because their API differs.
+
+| TC4
+| Attachment upload only exists in API v1
+| REST v2 has no endpoint that creates an attachment. The one v1 call
+  `+PUT /rest/api/content/{id}/child/attachment+` has to remain — see
+  xref:09_architecture_decisions.adoc[] and xref:11_technical_risks.adoc[].
+
+| TC5
+| Confluence Storage Format is XHTML
+| Content must be well-formed XML, not lenient HTML. Determines how documents are parsed and
+  serialised, see xref:08_concepts.adoc[].
+
+| TC6
+| Antora 3.1 output structure
+| The parser reads the generated `index.html` and its navigation panel. The HTML structure of
+  the Antora default UI is an implicit contract.
+|===
+
+== Organisational and Legal Constraints
+
+[options="header",cols="1,2,3"]
+|===
+| ID | Constraint | Consequence
+
+| OC1
+| Apache License 2.0
+| Every dependency must carry a compatible licence. Source files keep the licence header.
+
+| OC2
+| Distribution via Maven Central
+| Requires GPG-signed artifacts, sources and javadoc JARs, and complete POM metadata.
+  Published through `central-publishing-maven-plugin`; releases are triggered by a GitHub
+  release, snapshots on every push to `main`.
+
+| OC3
+| Single maintainer
+| The architecture favours few moving parts over completeness. Anything that cannot be
+  maintained by one person on a spare evening does not belong in the system.
+
+| OC4
+| Credentials are never part of the repository
+| Authentication data comes from `settings.xml` or the plugin configuration of the consuming
+  project, never from this project's own configuration.
+|===
+
+== Conventions
+
+* *Code style*: tab indentation, `final` on locals and parameters wherever possible, Javadoc on
+  every public type and method.
+* *Logging*: SLF4J with parameterised messages. `info` for what happened to the space, `debug`
+  for detail, `warn` for skipped-but-continued, `error` for a failed unit of work.
+* *Dependencies*: managed centrally in the parent POM via `dependencyManagement`; modules
+  declare artifacts without versions.
+* *Documentation*: arc42 in AsciiDoc, published with this project's own Maven plugin.
+
+IMPORTANT: OC4 and quality goal 4 in xref:01_introduction_and_goals.adoc[] together forbid a
+convenience that would otherwise be obvious — exposing `username` and `password` as CLI
+properties. They are configuration-only parameters precisely so that they cannot land in a CI log.

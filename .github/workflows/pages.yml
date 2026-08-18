@@ -1,0 +1,70 @@
+# Builds the Antora site in architecture-docs and deploys it to GitHub Pages.
+#
+# Requires GitHub Pages to be enabled once with "GitHub Actions" as the source
+# (Settings -> Pages -> Build and deployment -> Source). Without that, the deploy
+# job fails with a "Pages site not found" error.
+#
+# Antora is invoked directly here rather than through Maven, because this build
+# needs no JDK — only the site, not the artifacts.
+
+name: Deploy Documentation
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'architecture-docs/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+# The deploy job needs these; the build job only reads the repository.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deployment finish rather than cancelling it — a half-deployed
+# Pages site is worse than a slightly stale one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: architecture-docs/package-lock.json
+
+      - name: Install Antora
+        working-directory: architecture-docs
+        run: npm ci --ignore-scripts
+
+      - name: Build the site
+        working-directory: architecture-docs
+        run: npx antora --fetch --stacktrace playbook.yml
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload the site as a Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: architecture-docs/target/docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,42 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+:keywords: software-architecture, documentation, arc42, confluence, antora, docs-as-code
+
+:numbered!:
+**Architecture Documentation**
+
+[role="lead"]
+This is the architecture documentation of *Atlassian Tools* — a suite of Java libraries and a
+Maven plugin that publish Antora-generated documentation to Atlassian Confluence.
+
+It serves two purposes at once. It documents the system, and it *is* the sample: this very
+documentation is written in AsciiDoc, built into an Antora site, and published to Confluence by
+the tool it describes. What you are reading in Confluence was put there by
+`atlassian-maven-plugin` — so every page, link, image and admonition on these pages is also a
+live test of the publishing pipeline.
+
+TIP: Reading this in Confluence? Then the tool works. Reading it on the generated Antora site?
+That is the source the publisher consumes.
+
+[cols="1,3"]
+|===
+| Repository | https://github.com/huber-and/atlassian-tools
+| License | Apache License 2.0
+| Artifacts | `io.github.huber-and.atlassian` on Maven Central
+|===
+
+== Copyright and Licences
+
+The content of this documentation is © 2024-2026 Andreas Huber and is published under the
+https://www.apache.org/licenses/LICENSE-2.0[Apache License 2.0], like the software it describes.
+
+The document *structure* — the twelve chapters and their intent — is the
+https://arc42.org[arc42] template, created and maintained by Dr. Gernot Starke and
+Dr. Peter Hruschka, licensed under
+https://creativecommons.org/licenses/by-sa/4.0/[CC BY-SA 4.0]. This is a modified use of the
+template: the explanatory `arc42help` blocks have been removed and every chapter has been filled
+with content specific to this project. arc42 and its authors do not endorse this system or this
+adaptation.
+
+Start with xref:01_introduction_and_goals.adoc[] for the goals, or jump straight to
+xref:05_building_block_view.adoc[] for the structure.

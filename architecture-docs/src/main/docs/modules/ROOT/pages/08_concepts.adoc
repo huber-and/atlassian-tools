@@ -1,0 +1,143 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[section-concepts]]
+= 8. Cross-cutting Concepts
+
+== Idempotent Publishing
+
+Writing a page on every build would produce a new version every time, notify every watcher and
+bury the real changes in the page history. The system therefore decides per page whether anything
+needs to be written at all.
+
+The transformed body is hashed and the hash is stored as the Confluence page property
+`page-content-hash`. Before the next update, the stored value is compared with the freshly
+computed one; on a match, no write happens. Attachments use the same idea with the hash carried
+in their upload comment, prefixed `sha256:` so it stays distinguishable from a comment a user set
+by hand.
+
+Comparing hashes of *our own transformation output* — rather than diffing against what Confluence
+returns — is what makes this reliable: Confluence normalises the stored body, so a byte comparison
+against the remote body would never match.
+
+== Path Safety
+
+Every file path the system opens originates in HTML that the system did not write: an `href` in
+the navigation, an `img src` in a page body. Such a value can point anywhere, including
+`../../../etc/passwd`.
+
+All of them pass through `SafePaths`:
+
+[source,java]
+----
+public static Path resolveWithin(final Path root, final String userInput) {
+    final Path candidate = root.resolve(userInput).normalize();
+    if (!isWithin(root, candidate)) {
+        throw new IllegalArgumentException("Path escapes root: " + userInput);
+    }
+    return candidate;
+}
+----
+
+Two boundaries exist, deliberately:
+
+`resolveWithin`:: for resolving a path — used where a value becomes a file to read.
+`isWithin`:: for testing containment where the boundary is not a single directory. A link may
+  legitimately leave the directory of the page it appears on, as long as it stays inside one of the
+  configured mapper paths.
+
+A violation is never fatal: the offending reference is dropped with a warning and the surrounding
+page is still published.
+
+== Credential Handling
+
+Confidentiality is quality goal 4 in xref:01_introduction_and_goals.adoc[], and it is implemented
+in four places at once:
+
+* `username` and `password` are plugin parameters *without* a CLI property, so they cannot be
+  passed — and thus logged — as `-D` arguments.
+* The preferred path is a `<server>` entry in `settings.xml`, decrypted through Maven's
+  `SettingsDecrypter`, so an encrypted password stays encrypted at rest.
+* `Configuration.password` carries `@ToString.Exclude` *and* `@EqualsAndHashCode.Exclude`;
+  `username` carries `@ToString.Exclude`. A configuration dump at any log level cannot reveal
+  either.
+* Only the *host* of the target URL is logged, not the full URL, so credentials embedded in a URL
+  cannot surface.
+
+NOTE: The exclusions are covered by unit tests. A future field added to `Configuration` without
+thinking about `toString()` would not break them — which is why the test asserts the absence of
+the secret rather than the presence of the annotation.
+
+== Link Resolution
+
+A documentation link has five possible fates, and getting them apart is what makes the published
+pages feel native rather than pasted:
+
+[options="header",cols="1,2,2"]
+|===
+| Kind | Source example | Result in Confluence
+
+| `PAGE`
+| `xref:05_building_block_view.adoc[]`
+| `ac:link` to the page, by title and space key. Across spaces when the target is `foreign`.
+
+| `ANCHOR`
+| `<<section-concepts>>`
+| Link to the fragment within the page.
+
+| `ATTACHMENT`
+| `link:spec.pdf[]`
+| `ri:attachment` reference; the file is uploaded alongside the page.
+
+| `EXTERNAL`
+| `https://arc42.org`
+| Left untouched.
+
+| `UNRESOLVED`
+| A link to a page that is not published
+| Link text kept, link dropped, counted in the per-page report.
+|===
+
+The counts appear in the build log per page, which turns "did my links survive?" into something
+the build answers by itself.
+
+== XHTML Correctness
+
+Confluence Storage Format is XML, not HTML. A lenient HTML parser would happily accept unclosed
+tags and produce a body Confluence rejects. Documents are therefore parsed with jsoup's *XML
+parser* and serialised with settings that keep the result valid:
+
+[source,java]
+----
+final var doc = Jsoup.parse(file, "UTF-8", "", org.jsoup.parser.Parser.xmlParser());
+doc.outputSettings().prettyPrint(false);                      // preserve linebreaks in code blocks
+doc.outputSettings().escapeMode(Entities.EscapeMode.xhtml);   // keep entities XHTML-valid
+----
+
+Switching off pretty-printing is not cosmetic: it is what keeps whitespace inside code blocks
+intact.
+
+== Error Handling and Logging
+
+The unit of failure is the mapper, not the build. Errors are logged where they happen, collected,
+and reported once at the end with the list of affected space keys. Anything recoverable — an
+unsafe path, an unresolvable link, an unknown admonition type — is a warning that does not stop the
+run.
+
+Log levels carry meaning:
+
+`info`:: what happened to the space — pages transformed, link counts, orphans, the active parser.
+`debug`:: detail for diagnosis, including configuration dumps.
+`warn`:: something was skipped, the run continues.
+`error`:: a unit of work failed.
+
+== Extensibility
+
+`Parser` is the intended extension point: implement it, add it to the plugin's classpath, and name
+it in `parserClass` to publish something other than an Antora site. The contract is a public
+no-argument constructor plus `init(Configuration)`.
+
+Resolution is hardened against the obvious failure mode — a typo in the class name loads no code:
+the class is resolved without running its static initializers and only instantiated after it has
+been verified to implement `Parser`.
+
+See xref:08_01_sample_code.adoc[] for a minimal implementation.

@@ -1,0 +1,64 @@
+/*
+ * Copyright 2024-2026 Andreas Huber
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * Supplemental styles on top of the Antora default UI.
+ *
+ * Loaded after site.css, so plain selectors of equal specificity win. The default UI ships a
+ * dark navbar (background #191919, white text); everything below turns it light and restores
+ * the contrast that the dark background provided.
+ */
+
+.navbar {
+  background: #fff;
+  color: #191919;
+  border-bottom: 1px solid #e1e1e1;
+}
+
+.navbar-brand .navbar-item,
+.navbar-end .navbar-item,
+.navbar-end > a.navbar-item:focus,
+.navbar-end > a.navbar-item:hover {
+  color: #191919;
+}
+
+/* The brand is the site title — keep it the strongest element in the bar. */
+.navbar-brand .navbar-item:first-child {
+  font-weight: 600;
+}
+
+.navbar-item:hover,
+.navbar-end > a.navbar-item:hover {
+  background: #f0f0f0;
+}
+
+/* Burger bars are white in the default UI and would vanish on white. */
+.navbar-burger span {
+  background-color: #191919;
+}
+
+/* The search field inherited light-on-dark colors from the dark bar. */
+.navbar .search #search-input {
+  color: #191919;
+}
+
+.navbar .search #search-input::-webkit-input-placeholder {
+  color: #767676;
+}
+
+.navbar .search #search-input::placeholder {
+  color: #767676;
+}

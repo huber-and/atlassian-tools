@@ -1,0 +1,46 @@
+# Antora playbook for the published site on GitHub Pages.
+#
+# Used by .github/workflows/pages.yml. For local previews use local-playbook.yml,
+# which reads the working tree and points at the Confluence space instead.
+site:
+  title: Atlassian Tools — Architecture
+  start_page: docs::index.adoc
+  # Must include the repository path segment, otherwise sitemap, canonical and 404
+  # URLs point at the domain root.
+  url: https://huber-and.github.io/atlassian-tools
+content:
+  sources:
+    # url is resolved relative to this playbook, so ../ is the repository root.
+    # HEAD rather than main: in CI the checkout is often in detached-HEAD state, where
+    # a refs/heads/main does not exist. version pins the label regardless.
+    #
+    # worktrees: false is required, not cosmetic. With a worktree source Antora ignores
+    # edit_url and emits a file:// link to the local checkout instead — which on the
+    # published site would be a dead link to the CI runner's file system. Reading from
+    # the commit also matches what Pages should show: the state of main, not of a dirty
+    # working tree.
+    - url: ../
+      branches: HEAD
+      worktrees: false
+      version: main
+      start_path: architecture-docs/src/main/docs
+      edit_url: https://github.com/huber-and/atlassian-tools/edit/main/{path}
+asciidoc:
+  attributes:
+    sectanchors: true
+ui:
+  supplemental_files: ./supplemental-ui
+  bundle:
+    url: https://gitlab.com/antora/antora-ui-default/-/jobs/artifacts/HEAD/raw/build/ui-bundle.zip?job=bundle-stable
+    snapshot: true
+output:
+  dir: ./target/docs
+runtime:
+  fetch: true
+  cache_dir: ./target/cache
+  log:
+    format: pretty
+antora:
+  extensions:
+    - require: '@antora/lunr-extension'
+      index_latest_only: true

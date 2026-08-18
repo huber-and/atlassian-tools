@@ -1,5 +1,8 @@
 # Confluence REST API Client
 
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.huber-and.atlassian/wiki-client?label=Maven%20Central)](https://mvnrepository.com/artifact/io.github.huber-and.atlassian/wiki-client)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](../LICENSE)
+
 The **wiki-client** is a Java library that provides a comprehensive client for the Atlassian Confluence Cloud REST API. It is primarily generated from the Confluence OpenAPI specification (v2), ensuring up-to-date coverage of the API endpoints, with additional support for specific v1 operations like attachment management.
 
 ## Features
@@ -12,13 +15,13 @@ The **wiki-client** is a Java library that provides a comprehensive client for t
 
 ## Installation
 
-Add the dependency to your `pom.xml`:
+Add the dependency to your `pom.xml`. The badge above always shows the latest released version:
 
 ```xml
 <dependency>
     <groupId>io.github.huber-and.atlassian</groupId>
     <artifactId>wiki-client</artifactId>
-    <version>${atlassian-tools.version}</version>
+    <version>0.2.2</version>
 </dependency>
 ```
 
@@ -57,11 +60,21 @@ public class ConfluenceExample {
 
 ### Managing Attachments
 
-Use the `ContentAttachmentsApi` for uploading files.
+Use the `ContentAttachmentsApi` for uploading files. This is the one place where the
+client falls back to the v1 API: REST API v2 has no endpoint for creating an
+attachment — its attachment resources are read-only apart from properties. Atlassian
+tracks the gap as [CONFCLOUD-77196](https://jira.atlassian.com/browse/CONFCLOUD-77196),
+which sits in *Future Consideration* without an assignee or ETA (as of July 2026), so
+`PUT /rest/api/content/{id}/child/attachment` stays the only option. That v1 operation
+is not marked as deprecated.
+
+Because the endpoint accepts `multipart/form-data`, Confluence guards it against XSRF
+and rejects requests without an `X-Atlassian-Token: nocheck` header.
 
 ```java
 import net.atlassian.wiki.rest.v1.api.ContentAttachmentsApi;
 import java.io.File;
+import java.util.Map;
 
 // ... inside your method
 ContentAttachmentsApi attachmentApi = new ContentAttachmentsApi(client);
@@ -74,7 +87,7 @@ attachmentApi.createOrUpdateAttachments(
     "true",                 // Minor edit (no notification)
     "current",              // Status
     "Uploaded via API",     // Comment
-    null                    // Additional headers
+    Map.of("X-Atlassian-Token", "nocheck") // Additional headers, required
 );
 ```
 
@@ -83,6 +96,20 @@ attachmentApi.createOrUpdateAttachments(
 This client is generated using the [OpenAPI Generator](https://openapi-generator.tech) maven plugin.
 - **Input Spec:** `src/main/openapi/ConfluenceV2.json`
 - **Output Package:** `net.atlassian.wiki.rest`
+
+### Updating the OpenAPI spec
+
+The bundled spec comes from
+<https://developer.atlassian.com/cloud/confluence/openapi-v2.v3.json> (upstream version
+2.0.0, server `https://{your-domain}/wiki/api/v2`).
+
+The local copy is **patched** and must not simply be overwritten. After replacing it,
+re-apply the following change, otherwise the generated sources do not compile:
+
+- In the `200` response schema of `/pages/{id}/likes/count`, `/blogposts/{id}/likes/count`,
+  `/footer-comments/{id}/likes/count` and `/inline-comments/{id}/likes/count`, change
+  `"title": "Integer"` to `"title": "Count"` (4 occurrences). Upstream's title makes the
+  generator emit a model class named `Integer`, which clashes with `java.lang.Integer`.
 
 ## License
 

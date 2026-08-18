@@ -28,13 +28,14 @@ This is a four-module Maven project (`groupId: io.github.huber-and.atlassian`). 
 ```
 wiki-client  →  wiki-publisher  →  maven-plugin
                                         ↑
-                                   arc42-sample (demo, excluded from Central publishing)
+                                   architecture-docs (demo, excluded from Central publishing)
 ```
 
 ### `wiki-client`
 - Contains the **Confluence REST API client**.
 - The **V2 API** (`net.atlassian.wiki.rest.v2`) is **auto-generated** at build time from `src/main/openapi/ConfluenceV2.json` using the OpenAPI Generator Maven plugin (generator: `java`, library: `apache-httpclient`). **Do not edit generated sources** under `target/generated-sources/`.
-- The **V1 API** (`net.atlassian.wiki.rest.v1`) (used only for attachment uploads) is manually maintained in `src/main/java`.
+- The **V1 API** (`net.atlassian.wiki.rest.v1`) (used only for attachment uploads) is manually maintained in `src/main/java`. V2 has **no** endpoint for creating attachments (tracked as CONFCLOUD-77196, *Future Consideration*, no ETA as of July 2026), so the upload must stay on V1; the V1 operation is not deprecated. The upload requires an `X-Atlassian-Token: nocheck` header.
+- `src/main/openapi/ConfluenceV2.json` is a **patched** copy of the upstream spec — see "Updating the OpenAPI spec" in `wiki-client/README.md` before replacing it.
 
 ### `wiki-publisher`
 - Core publishing logic. Entry point is `Publisher`, which wires together three collaborators:
@@ -72,4 +73,4 @@ wiki-client  →  wiki-publisher  →  maven-plugin
 
 ### Version management
 - Version follows the Maven CI-friendly pattern: `${revision}${changelist}` in the root POM. The default is `0.2.0-SNAPSHOT`.
-- The `arc42-sample` module is excluded from Maven Central publishing via `<excludeArtifacts>` in the `central-publishing-maven-plugin`.
+- The `architecture-docs` module is excluded from Maven Central publishing via `<excludeArtifacts>` in the `central-publishing-maven-plugin`.

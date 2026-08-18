@@ -1,0 +1,126 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[section-introduction-and-goals]]
+= 1. Introduction and Goals
+
+Atlassian Tools closes the gap between two worlds that most organisations run in parallel:
+documentation is *written* as code — AsciiDoc in Git, reviewed in pull requests, built by CI —
+but it is *read* in Confluence, because that is where the rest of the company looks.
+
+Maintaining both by hand means the Confluence copy is outdated the moment it is created. This
+system makes the Confluence space a build artifact: generated from the same source, republished
+on every build, and kept in sync down to deleted pages.
+
+== Requirements Overview
+
+[options="header",cols="1,3,1"]
+|===
+| ID | Requirement | Priority
+
+| R1
+| Publish an Antora-generated HTML site into a Confluence space, preserving the navigation
+  hierarchy as a page tree.
+| must
+
+| R2
+| Map several local documentation trees to several Confluence spaces within a single build.
+| must
+
+| R3
+| Rewrite internal links so they point at the published Confluence pages — including links that
+  cross from one space into another.
+| must
+
+| R4
+| Publish images and downloadable files as Confluence attachments and rewrite their references.
+| must
+
+| R5
+| Leave pages untouched whose content has not changed, so that page histories stay readable.
+| must
+
+| R6
+| Remove pages from Confluence that no longer exist locally, with a preview mode that only
+  reports what would be removed.
+| should
+
+| R7
+| Read credentials from Maven `settings.xml`, including encrypted passwords.
+| should
+
+| R8
+| Allow a different source format than Antora by supplying a custom parser.
+| could
+|===
+
+The functional core is deliberately narrow: this is a one-way publisher. Editing in Confluence
+and syncing back is explicitly *not* a goal — see xref:03_context_and_scope.adoc[].
+
+== Quality Goals
+
+[options="header",cols="1,2,3"]
+|===
+| Priority | Quality Goal | Concrete Scenario
+
+| 1
+| Idempotence
+| Running `mvn atlassian:publish` twice without changing the source produces no new page
+  versions in Confluence. A reader looking at the page history sees only real content changes.
+
+| 2
+| Safety of the target space
+| A misconfiguration must not silently destroy content. Deletion is scoped to the configured
+  root page, moves pages to the trash rather than purging them, and is previewable before it is
+  enabled.
+
+| 3
+| Traceability
+| After a build, the log answers "what did this do to my space?" — which pages were created,
+  updated or skipped, how many links were resolved, and which links could not be resolved.
+
+| 4
+| Confidentiality of credentials
+| Confluence credentials never appear in build output, not in a log line, an exception message,
+  or a configuration dump — even at debug level.
+
+| 5
+| Robustness against partial failure
+| One unreachable space or one malformed page does not abort the whole build; the remaining
+  mappers are published and the failure is reported at the end.
+|===
+
+NOTE: Idempotence ranks above everything else for a reason. A publisher that rewrites every
+page on every build floods watchers with notifications and makes the page history useless — which
+is the fastest way to get the tool banned by a Confluence admin.
+
+== Stakeholders
+
+[options="header",cols="1,2,3"]
+|===
+| Role | Interest | Expectation towards the architecture
+
+| Documentation author
+| Writes AsciiDoc, never opens Confluence
+| Publishing is a build step they do not have to think about. Their source stays free of
+  Confluence-specific markup.
+
+| Development team
+| Owns the build
+| Integrates as an ordinary Maven plugin, fails the build loudly on real errors, and is
+  configurable from `pom.xml` without code.
+
+| Confluence administrator
+| Owns the target instance
+| No surprise deletions, no version spam, no credentials in logs, and API usage that stays
+  within the documented Confluence Cloud contract.
+
+| Documentation reader
+| Reads in Confluence
+| Pages look native: working internal links, real attachments, admonitions rendered as
+  Confluence macros — not a wall of pasted HTML.
+
+| Maintainer of this project
+| Extends the tool
+| Source formats and target behaviour are swappable at the seams, and the published API surface
+  stays small enough to evolve.
+|===

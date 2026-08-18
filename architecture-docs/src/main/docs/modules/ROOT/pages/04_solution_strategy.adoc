@@ -1,0 +1,71 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[section-solution-strategy]]
+= 4. Solution Strategy
+
+Five decisions carry the whole design. Each maps a constraint or quality goal onto a concrete
+technical choice; the reasoning is recorded in xref:09_architecture_decisions.adoc[].
+
+[options="header",cols="1,2,2"]
+|===
+| Goal or constraint | Approach | Why it works
+
+| Preserve the navigation hierarchy (R1)
+| Consume the *generated HTML*, not the AsciiDoc sources. The navigation panel of Antora's
+  `index.html` already is the page tree.
+| Antora has resolved modules, versions and cross-references. Re-implementing that on the source
+  level would mean rebuilding Antora.
+
+| Correct internal links, including across spaces (R3)
+| Publish in *two phases*: parse every mapper first, build one link index over all page trees,
+  then write to Confluence.
+| A link can only be expressed as a Confluence page reference once the title and space key of the
+  target are known — which is not the case while the first mapper is still being parsed.
+
+| Idempotence (quality goal 1)
+| Store a *content hash* as a page property and compare before writing. Attachments carry their
+  hash in the upload comment.
+| Makes "has anything changed?" a local comparison instead of a diff against the rendered
+  Confluence body, which would never match byte for byte.
+
+| Safety of the target space (quality goal 2)
+| Deletion is scoped to the configured root page, uses the *trash* rather than a purge, and
+  `deleteOrphans=false` reports instead of deleting.
+| The destructive operation is opt-in per mapper, reversible in Confluence, and can be previewed
+  in a real build before it is armed.
+
+| Robustness against partial failure (quality goal 5)
+| Each mapper is an independent unit of work. Failures are collected and reported after all
+  mappers ran.
+| A single unreachable space does not cost the other spaces their update — relevant when one
+  build publishes into several spaces.
+|===
+
+== Technology Choices
+
+* *jsoup* for reading and writing HTML — used with the *XML parser*, because Confluence Storage
+  Format has to be well-formed XHTML (see xref:08_concepts.adoc[]).
+* *Generated REST client* from Atlassian's OpenAPI v2 specification, so API models stay in step
+  with the upstream contract instead of being hand-maintained.
+* *Apache HttpClient 5* as the transport, *Jackson* for JSON.
+* *Lombok* for boilerplate on data types — with explicit `@ToString.Exclude` on secrets, which
+  turns a convenience annotation into part of the confidentiality story.
+* *SLF4J* as the logging facade, so the consuming build decides where output goes.
+
+== Structural Decomposition
+
+The system is split into three published artifacts plus this sample, along the axis of *what each
+part knows about*:
+
+`wiki-client`:: Knows the Confluence HTTP API and nothing about documentation.
+`wiki-publisher`:: Knows documentation structure and the publishing workflow, and nothing about
+  Maven.
+`atlassian-maven-plugin`:: Knows Maven — parameters, `settings.xml`, the build lifecycle — and
+  delegates everything else.
+`architecture-docs`:: Knows neither; it is a consumer that proves the chain works.
+
+TIP: The split is what makes `wiki-publisher` usable as a plain library from any JVM application,
+not just from a Maven build. That option costs nothing as long as no Maven type leaks into it.
+
+Details in xref:05_building_block_view.adoc[], the resulting flow in
+xref:06_runtime_view.adoc[].

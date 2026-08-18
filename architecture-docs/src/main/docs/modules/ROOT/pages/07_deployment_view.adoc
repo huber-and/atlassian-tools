@@ -1,0 +1,135 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[section-deployment-view]]
+= 7. Deployment View
+
+The system has no server side of its own. It is a build-time tool: it runs wherever Maven runs and
+its only runtime dependency is a reachable Confluence Cloud instance.
+
+== Infrastructure Level 1
+
+....
+  ┌─────────────────────────────────────────┐
+  │ Build environment (developer or CI)     │
+  │                                         │
+  │  JDK 21   Maven ≥ 3.9.2   Node 24 (*)   │
+  │                                         │
+  │  ┌───────────────┐   ┌───────────────┐  │
+  │  │ Antora build  │──►│ Maven plugin  │  │
+  │  │ (site → HTML) │   │ atlassian:    │  │
+  │  └───────────────┘   │ publish       │  │
+  │                      └───────┬───────┘  │
+  └──────────────────────────────┼──────────┘
+                                 │ HTTPS
+                                 ▼
+                   ┌──────────────────────────┐
+                   │ Confluence Cloud         │
+                   │ *.atlassian.net/wiki     │
+                   └──────────────────────────┘
+
+  (*) only in the module that generates the Antora site
+....
+
+[options="header",cols="1,2"]
+|===
+| Element | Explanation
+
+| JDK 21
+| Required by the compiled bytecode of all three artifacts.
+
+| Maven ≥ 3.9.2
+| Runs the plugin. The floor is inherited from the release tooling, see
+  xref:02_architecture_constraints.adoc[].
+
+| Node 24 / Antora 3.1
+| Only needed where the site is *generated*. Installed into the build by
+  `frontend-maven-plugin`, so no global Node installation is required. A project that already has
+  its site elsewhere does not need Node at all.
+
+| Confluence Cloud
+| The target. Reached over HTTPS with the credentials of the configured account; the account's
+  permissions define what the tool may do.
+|===
+
+== Deployment of the Artifacts
+
+Three artifacts are published to Maven Central under the group
+`io.github.huber-and.atlassian`. Three GitHub Actions workflows drive the deployments:
+
+[options="header",cols="1,1,2"]
+|===
+| Workflow | Trigger | Result
+
+| `build.yml`
+| Push and pull request on `main`
+| Builds and tests, then deploys a `-SNAPSHOT` to the Central Portal snapshot repository.
+
+| `publish.yml`
+| A GitHub release is created
+| Builds with `-Prelease -Drevision=<tag> -Dchangelist=` and deploys the release to Maven
+  Central.
+
+| `pages.yml`
+| Push on `main` touching `architecture-docs/`
+| Builds this documentation with Antora and deploys it to GitHub Pages.
+|===
+
+The version is assembled from `+${revision}${changelist}+` (CI friendly versions). A release build
+overrides both from the Git tag name, so the tag *is* the version — there is no version string to
+forget in a POM.
+
+Signing and upload run through `central-publishing-maven-plugin`; `distributionManagement` is
+deliberately absent, since the plugin routes both snapshots and releases.
+
+== Deployment of the Documentation
+
+The documentation goes to two places, from one source.
+
+=== To GitHub Pages
+
+`pages.yml` builds the Antora site and publishes it to
+https://huber-and.github.io/atlassian-tools[GitHub Pages]. This path does not involve Maven at
+all — it needs no JDK, only Node and Antora — and it uses `playbook.yml`.
+
+Two settings in that playbook are load-bearing rather than decorative:
+
+`worktrees: false`:: Makes Antora read the *commit* instead of the working tree. Without it,
+  Antora ignores `edit_url` and emits a `file://` link into the CI runner's file system on every
+  page. It also means Pages shows the state of `main`, not of a dirty checkout.
+`site.url`:: Must carry the repository path segment
+  (`https://huber-and.github.io/atlassian-tools`), otherwise sitemap, canonical and 404 URLs
+  point at the domain root. Setting it is also what makes Antora emit `sitemap.xml` and
+  `404.html` in the first place.
+
+NOTE: GitHub Pages has to be enabled once in the repository settings with *GitHub Actions* as the
+source. Until then, the deploy job fails with "Pages site not found" — the workflow is correct,
+the repository is not yet configured.
+
+=== To Confluence
+
+The same source, published by the system itself:
+
+[source,bash]
+----
+mvn -pl architecture-docs clean compile atlassian:publish
+----
+
+`compile` runs Antora, which writes the site to `target/docs/docs/main`; `atlassian:publish`
+picks it up and pushes it into the configured space. Both steps live in the same POM, so the
+published state can never be newer or older than the built site.
+
+[source,xml]
+----
+<mapper>
+    <spaceKey>arc42sample</spaceKey>
+    <root>Architecture</root>
+    <path>${project.basedir}/target/docs/docs/main</path>
+</mapper>
+----
+
+TIP: The path points into `target`, which means a `clean` build always publishes a freshly
+generated site. Publishing a stale site is only possible by skipping `compile` on purpose.
+
+Credentials are not part of this configuration. `serverId` names a `<server>` entry in
+`settings.xml`, and the plugin decrypts its password through Maven's own mechanism — see
+xref:08_concepts.adoc[].

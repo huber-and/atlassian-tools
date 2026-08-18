@@ -1,0 +1,92 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[section-context-and-scope]]
+= 3. Context and Scope
+
+== Business Context
+
+....
+   ┌──────────────────┐        AsciiDoc          ┌──────────────────┐
+   │  Documentation   │ ───────────────────────► │   Git repository │
+   │     author       │                          └────────┬─────────┘
+   └──────────────────┘                                   │
+                                                          │ checkout
+                                                          ▼
+   ┌──────────────────┐      mvn ... publish     ┌──────────────────┐
+   │   Build (local   │ ◄──────────────────────► │  Antora site     │
+   │    or CI)        │                          │  (HTML in target)│
+   └────────┬─────────┘                          └──────────────────┘
+            │
+            │ REST (v2 + v1 for attachments)
+            ▼
+   ┌──────────────────┐        reads             ┌──────────────────┐
+   │  Confluence      │ ───────────────────────► │  Documentation   │
+   │  Cloud space     │                          │     reader       │
+   └──────────────────┘                          └──────────────────┘
+....
+
+[options="header",cols="1,2,2"]
+|===
+| Partner | Input to the system | Output from the system
+
+| Documentation author
+| AsciiDoc sources and images in the repository. Never interacts with the system directly.
+| Their content, visible in Confluence.
+
+| Build (Maven, local or CI)
+| Plugin configuration from `pom.xml`, the generated Antora site on disk, credentials from
+  `settings.xml`.
+| Build log with the publishing report; a failed build if publishing fails.
+
+| Confluence Cloud
+| Existing pages, page properties, attachments and space metadata.
+| Created, updated and trashed pages; uploaded attachments; page properties.
+
+| Documentation reader
+| —
+| Confluence pages with a native look: resolved links, real attachments, Confluence macros.
+|===
+
+== Technical Context
+
+[options="header",cols="1,1,2"]
+|===
+| Interface | Protocol / Format | Purpose
+
+| Antora site
+| Local file system, XHTML
+| The parser reads `index.html` for the navigation and each page's `article.doc` element for its
+  content. Images and downloadable files are read from the site directory.
+
+| Confluence REST API v2
+| HTTPS, JSON
+| Spaces, pages, page properties, descendants. Everything except attachment creation.
+
+| Confluence REST API v1
+| HTTPS, `multipart/form-data`
+| `+PUT /rest/api/content/{id}/child/attachment+` — the only way to create an attachment.
+  Requires the header `X-Atlassian-Token: nocheck`.
+
+| Maven `settings.xml`
+| Maven API, encrypted or plain
+| Credential lookup via `<server>` entry, decrypted through Maven's `SettingsDecrypter`.
+|===
+
+== Out of Scope
+
+The boundaries matter as much as the features, so they are stated explicitly:
+
+* *No reverse sync.* Content flows from Git to Confluence only. Edits made in Confluence are
+  overwritten on the next publish — the space is a build artifact, not a source.
+* *No AsciiDoc rendering.* Antora does that. The system consumes generated HTML, which is why it
+  inherits Antora's cross-reference resolution and module handling for free.
+* *No Confluence Server or Data Center.* API v2 is Cloud-only, see
+  xref:02_architecture_constraints.adoc[].
+* *No page-level access control.* Permissions are managed in Confluence; the tool publishes with
+  the rights of the configured account.
+* *No incremental site build.* Antora regenerates the whole site; the publisher decides per page
+  whether anything needs to be written.
+
+CAUTION: Because there is no reverse sync, a page edited directly in Confluence loses those edits
+at the next build. Publishing into a space where people also author by hand is a
+configuration mistake, not a supported mode.

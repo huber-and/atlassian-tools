@@ -1,0 +1,4 @@
+name: docs
+title: Atlassian Tools
+nav:
+- modules/ROOT/nav.adoc

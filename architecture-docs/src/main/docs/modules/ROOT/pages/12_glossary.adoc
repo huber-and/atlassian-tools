@@ -1,0 +1,71 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[section-glossary]]
+= 12. Glossary
+
+[options="header",cols="1,3"]
+|===
+| Term | Definition
+
+| Antora
+| Static site generator for AsciiDoc documentation, organising content into components, versions
+  and modules. Produces the HTML site this system consumes.
+
+| arc42
+| Template for architecture documentation by Dr. Peter Hruschka and Dr. Gernot Starke, structured
+  into the twelve chapters used here.
+
+| Attachment
+| A file bound to a Confluence page — image or download. Referenced in the storage format as
+  `ri:attachment` and, in this system, uploaded via the v1 API.
+
+| Confluence Storage Format
+| The XHTML-based format Confluence stores page bodies in. Includes Confluence-specific elements
+  such as `ac:structured-macro` and `ri:attachment`. Well-formed XML, not lenient HTML.
+
+| Content hash
+| SHA-256 over the transformed page body, stored as the page property `page-content-hash`. The
+  basis of change detection — see xref:08_concepts.adoc[].
+
+| Cross-space link
+| A link whose target lives in a different Confluence space than the page containing it. Marked
+  `foreign` by the `LinkResolver` and only resolvable because publishing runs in two phases.
+
+| Mapper
+| Configuration unit binding one local directory to one Confluence space, optionally under a root
+  page. Several mappers may be configured per build.
+
+| Mojo
+| A Maven plugin goal. Here: `PagePublisherMojo`, providing the goal `atlassian:publish`.
+
+| Orphan
+| A page below the configured root page that exists in Confluence but no longer in the local
+  source. Reported always, trashed only when `deleteOrphans` is enabled.
+
+| Page property
+| Key/value data Confluence stores alongside a page. Used here for the content hash.
+
+| Parser
+| The interface abstracting the source format. `AntoraParser` is the built-in implementation;
+  another can be named via `parserClass` (since 0.2.3).
+
+| Root page
+| An existing Confluence page under which a mapper's content is created. Also the scope boundary
+  for orphan detection — without it, no deletion happens.
+
+| Space key
+| The short identifier of a Confluence space, e.g. `DOCS`. Together with the page title it
+  identifies a page for linking.
+
+| Touched page
+| A page the current run created, updated or deliberately skipped as unchanged. Everything below
+  the root that was *not* touched is an orphan.
+
+| Transformer
+| Converts an HTML fragment into Confluence Storage Format, resolving links and collecting
+  attachments. `ConfluenceTransformer` is the implementation.
+
+| XSRF header
+| `X-Atlassian-Token: nocheck`, required by Confluence for the `multipart/form-data` attachment
+  upload. Without it the request is rejected.
+|===

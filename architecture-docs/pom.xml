@@ -1,0 +1,100 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+	<parent>
+		<groupId>io.github.huber-and.atlassian</groupId>
+		<artifactId>atlassian-tools</artifactId>
+		<version>${revision}${changelist}</version>
+		<relativePath>../</relativePath>
+	</parent>
+	<modelVersion>4.0.0</modelVersion>
+	<artifactId>architecture-docs</artifactId>
+	<packaging>pom</packaging>
+	<description>Architecture documentation of Atlassian Tools, published with its own Maven plugin</description>
+
+	<properties>
+		<!-- Node 24 is the current Active LTS (Krypton); npm pinned to the
+		version bundled with that Node release -->
+		<node.version>v24.19.0</node.version>
+		<npm.version>11.17.0</npm.version>
+		<antora.version>3.1.15</antora.version>
+	</properties>
+	<build>
+		<resources>
+			<resource>
+				<filtering>true</filtering>
+				<directory>src/main/resources</directory>
+			</resource>
+		</resources>
+		<plugins>
+			<plugin>
+				<groupId>com.github.eirslett</groupId>
+				<artifactId>frontend-maven-plugin</artifactId>
+				<version>${frontend.plugin.version}</version>
+				<executions>
+					<execution>
+						<id>install-node-npm</id>
+						<goals>
+							<goal>install-node-and-npm</goal>
+						</goals>
+						<phase>initialize</phase>
+						<configuration>
+							<nodeVersion>${node.version}</nodeVersion>
+							<npmVersion>${npm.version}</npmVersion>
+						</configuration>
+					</execution>
+					<execution>
+						<id>install-antora</id>
+						<goals>
+							<goal>npm</goal>
+						</goals>
+						<phase>initialize</phase>
+						<configuration>
+							<arguments>--ignore-scripts install
+								@antora/cli@${antora.version}
+								@antora/site-generator-default@${antora.version}</arguments>
+						</configuration>
+					</execution>
+					<execution>
+						<id>docs-playbook</id>
+						<goals>
+							<goal>npx</goal>
+						</goals>
+						<phase>compile</phase>
+						<configuration>
+							<arguments>antora --stacktrace local-playbook.yml</arguments>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>io.github.huber-and.atlassian</groupId>
+				<artifactId>atlassian-maven-plugin</artifactId>
+				<version>${revision}${changelist}</version>
+				<configuration>
+					<url>${private.wiki.url}</url>
+					<serverId>${private.wiki.serverId}</serverId>
+					<mappers>
+						<mapper>
+							<spaceKey>arc42sample</spaceKey>
+							<root>Architecture</root>
+							<path>${project.basedir}/target/docs/docs/main</path>
+						</mapper>
+<!--
+						<mapper>
+							<spaceKey>arc42sample1</spaceKey>
+							<root>Architecture</root>
+							<path>${project.basedir}/target/docs/docs/main</path>
+						</mapper>
+-->
+					</mappers>
+				</configuration>
+			</plugin>
+		</plugins>
+
+	</build>
+
+
+</project>
+

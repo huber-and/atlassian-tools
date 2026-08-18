@@ -34,8 +34,14 @@ A Maven plugin that brings the power of the `wiki-publisher` directly into your 
   - Flexible configuration for mapping local directories to Confluence spaces.
   - Secure credential management via Maven `settings.xml`.
 
-### 4. `arc42-sample`
-A sample project demonstrating how to use the `atlassian-maven-plugin` with an [arc42](https://arc42.org/) documentation template.
+### 4. `architecture-docs`
+**Architecture Documentation** — 📖 [read it online](https://huber-and.github.io/atlassian-tools)
+The architecture documentation of this project, written in AsciiDoc following the
+[arc42](https://arc42.org/) template, built into an Antora site and published to Confluence by
+`atlassian-maven-plugin` itself — so it doubles as the end-to-end example of how to use the plugin.
+- Build the site: `mvn -pl architecture-docs clean compile`
+- Publish to Confluence: `mvn -pl architecture-docs clean compile atlassian:publish`
+- Published to GitHub Pages automatically by `.github/workflows/pages.yml`
 
 ## Requirements
 

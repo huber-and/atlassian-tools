@@ -1,0 +1,110 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[section-runtime-view]]
+= 6. Runtime View
+
+== Scenario 1: A complete publish run
+
+image::sequence_diagram.png["Publishing flow sequence",align="center"]
+
+The run splits into two phases, and the split is the central design decision of the runtime
+behaviour:
+
+*Initialization* — the parser class from `Configuration.parserClass` is resolved, verified and
+instantiated, then `init(config)` hands it the configuration.
+
+*Phase 1 — parse every mapper.* Each configured mapper is parsed into a `Page` tree and logged.
+Nothing is written to Confluence yet. A mapper that fails to parse is recorded and skipped; its
+pages are then missing from the link index, which is why the failure is reported at the end of the
+run.
+
+*Building the link index.* The page trees of all mappers become one `LinkResolver`. Only now can a
+link be expressed as "page _X_ in space _Y_" — before this point, a link into a space that has not
+been parsed yet is unresolvable.
+
+*Phase 2 — publish every mapper.* Per mapper: look up the space, create or update the root page,
+then walk the page tree recursively. Per page: load the content, transform it (resolving links on
+the way), write the body, set page properties, upload attachments, recurse into children.
+Afterwards the orphan check runs.
+
+NOTE: The ordering is not an optimisation, it is a correctness requirement. Publishing mapper by
+mapper in one pass would make cross-space links unresolvable in whichever space happens to be
+processed first.
+
+== Scenario 2: Nothing has changed
+
+The idempotence case, and the one that runs most often in practice:
+
+. `ConfluenceClient` reads the page property `page-content-hash` of the existing page.
+. The transformed body is hashed and compared.
+. On a match, no update call is made: no new version, no watcher notification, no entry in the
+  page history.
+. Attachments are compared the same way through the hash in their upload comment
+  (`sha256:…`).
+
+The page is still marked as *touched*, which matters for the next scenario.
+
+== Scenario 3: A page was deleted locally
+
+....
+  local site          Confluence space           result
+  ──────────          ────────────────           ──────
+  intro.adoc    ───►  Introduction         ───►  touched, kept
+  setup.adoc    ───►  Setup                ───►  touched, kept
+  (deleted)           Old Chapter                not touched ──► orphan
+....
+
+After all pages of a mapper are written, `syncPageStructure` loads every descendant of the root
+page and subtracts the set of touched page IDs. What remains was published by an earlier run and
+no longer exists locally.
+
+* With `deleteOrphans=true` (the default), the orphan is moved to the *trash* — recoverable in
+  Confluence.
+* With `deleteOrphans=false`, the log says `Would move to trash: …` and nothing is removed. This
+  is the preview mode: a real build against the real space that shows exactly what arming the
+  flag would do.
+
+The result list is ordered deepest first, so trashing a page never orphans its own children
+mid-run.
+
+IMPORTANT: Without a configured `root`, orphan detection is skipped entirely and logged as such.
+The scope would otherwise be the whole space — including pages that have nothing to do with this
+documentation.
+
+== Scenario 4: Error handling
+
+image::process_flow.png["Processing flow with both phases",align="center"]
+
+Failures are handled at the granularity of a mapper, not of the build:
+
+[options="header",cols="1,2,2"]
+|===
+| Failure | Reaction | Effect on the build
+
+| Unsafe href in the source HTML
+| Logged as a warning, navigation entry kept without a source
+| Build continues
+
+| A link that cannot be resolved
+| Counted and reported per page, link text kept without a link
+| Build continues
+
+| One page fails to transform or write
+| Logged with a stack trace, mapper marked as failed
+| Mapper reported at the end
+
+| A whole mapper fails to parse
+| Logged, mapper skipped, its pages missing from the link index
+| Mapper reported at the end
+
+| Parser class unknown or not a `Parser`
+| `IllegalStateException` during construction
+| Build fails immediately, nothing is published
+
+| At least one mapper failed
+| `IllegalStateException` listing the affected space keys
+| Build fails after all other mappers were published
+|===
+
+Transient HTTP failures are retried once through a small retry helper before they count as a
+failure.
