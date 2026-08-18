@@ -123,8 +123,16 @@ mvn -pl architecture-docs clean compile atlassian:publish
 picks it up and pushes it into the configured space. Both steps live in the same POM, so the
 published state can never be newer or older than the built site.
 
-In CI the same two steps run in `confluence.yml`, with one constraint that shapes the whole
-workflow: `username` and `password` have no CLI property, so credentials cannot be passed as `-D`
+In CI the same two steps run in `confluence.yml`. The build step installs into the local
+repository rather than merely packaging, because the publish runs as a separate Maven invocation
+and can only resolve the plugin from there. It skips everything that exists only for publishing to
+Maven Central — signing, sources and javadoc. Skipping the signature is not optional: the GPG
+plugin is bound to the `verify` phase of the *default* build, so a plain `install` fails in CI with
+`no default secret key`. The signing key belongs to the artifact release workflows and is
+deliberately absent here.
+
+The credentials follow one constraint that shapes the whole workflow: `username` and `password`
+have no CLI property, so they cannot be passed as `-D`
 arguments — see xref:08_concepts.adoc[]. `setup-java` therefore writes a `settings.xml` containing
 a `<server id="confluence">` entry whose values come from the environment, and the build points
 `serverId` at that entry. The connection URL is kept as a repository secret as well — not because

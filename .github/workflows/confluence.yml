@@ -63,12 +63,24 @@ jobs:
           server-username: CONFLUENCE_USERNAME
           server-password: CONFLUENCE_API_TOKEN
 
-      # Installs all modules into the local repository, so the publish step below
-      # resolves the plugin at the current -SNAPSHOT version, and runs the Antora
-      # build that produces architecture-docs/target/docs. Tests run here as well:
-      # publishing with a broken publisher is worse than not publishing.
+      # install, not package: the publish step below runs as a separate Maven
+      # invocation and can only resolve the plugin from the local repository.
+      # The same run produces the Antora site in architecture-docs/target/docs.
+      #
+      # Everything that only exists for publishing to Maven Central is skipped —
+      # signing, sources and javadoc. GPG in particular is bound to the verify
+      # phase of the default build, so without gpg.skip this job would fail with
+      # "no default secret key": the signing key is deliberately not available
+      # here, because this workflow publishes documentation, not artifacts.
+      #
+      # Tests do run: publishing with a broken publisher is worse than not
+      # publishing, and they cost a couple of seconds.
       - name: Build modules and generate the site
-        run: ./mvnw -B clean install
+        run: >
+          ./mvnw -B clean install
+          -Dgpg.skip=true
+          -Dmaven.javadoc.skip=true
+          -Dmaven.source.skip=true
 
       # No clean between install and publish — the publish reads the site that the
       # previous step generated in target/.
