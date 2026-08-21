@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+#
+# Copyright 2025-2026 Andreas Huber
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Launcher for atlassian-cli: checks GitHub for the latest release on every
+# run, downloads it if it is not already cached, and then runs it with the
+# arguments given to this script. See cli/README.md for the Windows
+# equivalent (atlassian-cli.ps1) and for what the CLI itself accepts.
+#
+# Cache location: $ATLASSIAN_CLI_HOME, or ~/.atlassian-cli if unset.
+# Optional: set GITHUB_TOKEN to raise GitHub's unauthenticated API rate limit.
+
+set -euo pipefail
+
+readonly REPO="huber-and/atlassian-tools"
+readonly INSTALL_DIR="${ATLASSIAN_CLI_HOME:-$HOME/.atlassian-cli}"
+readonly VERSION_FILE="$INSTALL_DIR/version"
+
+mkdir -p "$INSTALL_DIR"
+
+if ! command -v java >/dev/null 2>&1; then
+	echo "Error: java was not found on PATH. atlassian-cli needs Java 21 or later." >&2
+	exit 1
+fi
+if ! command -v curl >/dev/null 2>&1; then
+	echo "Error: curl was not found on PATH." >&2
+	exit 1
+fi
+
+# A wrapper, not an args array: an empty array expanded with `set -u` trips
+# bash 3.2's "unbound variable" (still the default /bin/bash on macOS).
+curl_gh() {
+	if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+		curl -H "Authorization: Bearer $GITHUB_TOKEN" "$@"
+	else
+		curl "$@"
+	fi
+}
+
+current_version=""
+if [[ -f "$VERSION_FILE" ]]; then
+	current_version="$(cat "$VERSION_FILE")"
+fi
+
+latest_version=""
+if release_json="$(curl_gh -fsSL --max-time 5 \
+	-H "Accept: application/vnd.github+json" \
+	"https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null)"; then
+	latest_version="$(printf '%s' "$release_json" \
+		| grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 \
+		| sed -E 's/.*"([^"]+)"$/\1/')"
+fi
+
+if [[ -z "$latest_version" && -z "$current_version" ]]; then
+	echo "Error: no cached atlassian-cli and GitHub could not be reached to download one." >&2
+	exit 1
+fi
+
+if [[ -n "$latest_version" && "$latest_version" != "$current_version" ]]; then
+	echo "Downloading atlassian-cli $latest_version..." >&2
+	download_url="https://github.com/$REPO/releases/download/$latest_version/atlassian-cli-$latest_version-shaded.jar"
+	tmp_file="$(mktemp "$INSTALL_DIR/download.XXXXXX")"
+	if curl_gh -fsSL --max-time 120 "$download_url" -o "$tmp_file"; then
+		mv "$tmp_file" "$INSTALL_DIR/atlassian-cli-$latest_version.jar"
+		if [[ -n "$current_version" && "$current_version" != "$latest_version" ]]; then
+			rm -f "$INSTALL_DIR/atlassian-cli-$current_version.jar"
+		fi
+		echo "$latest_version" >"$VERSION_FILE"
+		current_version="$latest_version"
+	else
+		rm -f "$tmp_file"
+		if [[ -z "$current_version" ]]; then
+			echo "Error: could not download atlassian-cli $latest_version." >&2
+			exit 1
+		fi
+		echo "Warning: could not download atlassian-cli $latest_version, using cached $current_version." >&2
+	fi
+elif [[ -z "$latest_version" ]]; then
+	echo "Warning: could not reach GitHub to check for updates, using cached $current_version." >&2
+fi
+
+jar_path="$INSTALL_DIR/atlassian-cli-$current_version.jar"
+if [[ ! -f "$jar_path" ]]; then
+	echo "Error: expected $jar_path but it is missing." >&2
+	exit 1
+fi
+
+exec java -jar "$jar_path" "$@"

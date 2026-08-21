@@ -13,17 +13,19 @@ Requirements: **JDK 21** and **Maven 3.9.2** or later (the Maven floor comes fro
 tooling, not from the code). Node and Antora are downloaded into the build by
 `frontend-maven-plugin` where they are needed — no global installation required.
 
-The reactor has four modules, in dependency order:
+The reactor has five modules, in dependency order:
 
 | Module | What it knows about |
 | :--- | :--- |
 | `wiki-client` | the Confluence HTTP API, nothing about documentation |
 | `wiki-publisher` | documentation structure and the publishing workflow, nothing about Maven |
 | `atlassian-maven-plugin` | Maven parameters, `settings.xml`, the build lifecycle |
+| `cli` | argv parsing and credential resolution, nothing about Maven or the parser internals |
 | `architecture-docs` | neither — it is the documentation and the end-to-end example |
 
 Please keep that separation: no Maven type may leak into `wiki-publisher`, because that is what
-keeps the library usable outside a Maven build.
+keeps the library usable outside a Maven build — the CLI module is the direct proof, depending on
+nothing but `wiki-publisher` itself.
 
 ## Tests
 

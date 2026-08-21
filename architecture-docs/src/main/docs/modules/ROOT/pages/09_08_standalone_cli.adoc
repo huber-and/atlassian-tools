@@ -1,0 +1,28 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[adr-8]]
+= 9.8 ADR-8: Standalone CLI as a thin adapter, not a rewrite
+
+*Status*: accepted
+
+*Context*: xref:09_07_three_artifacts.adoc[ADR-7] anticipated this — splitting into three
+artifacts was justified partly because it makes a future CLI "a small addition rather than a
+rewrite," provided no Maven type leaks into `wiki-publisher`. Maven-only distribution excludes
+Gradle projects, plain scripts and non-Maven CI pipelines from using this project at all.
+
+*Decision*: A fourth artifact, `atlassian-cli`, depends only on `wiki-publisher` and does nothing
+but turn command-line input into a `Configuration` and call `Publisher.publish()` — no new
+business logic anywhere else. It ships two artifacts from one build: a thin jar for Maven Central,
+and a shaded jar attached to GitHub Releases for dependency-free `java -jar` use. Argument parsing
+is hand-written rather than via a parsing library, keeping the module's own dependency footprint
+to `wiki-publisher` plus `jackson-dataformat-yaml` for the multi-mapper configuration file — a
+natural extension of the Jackson family already used elsewhere in the project, not a new kind of
+dependency. Credentials follow a different rule than the Maven plugin's "no CLI property": the CLI
+has no `--password` flag at all, because a standalone process's argv is visible via shell history
+and `ps`/`/proc` for as long as it runs — a broader exposure than the Maven-specific "leaks into a
+CI log" threat xref:11_technical_risks.adoc[] and `SECURITY.md` originally described for the
+plugin.
+
+*Consequences*: Confirms ADR-7's premise — the CLI added no code to `wiki-publisher` or
+`wiki-client`. Cost: a fourth artifact to release and document, and a CLI-specific paragraph in
+`SECURITY.md`'s threat model, since the original wording only covered Maven's `-D` mechanism.

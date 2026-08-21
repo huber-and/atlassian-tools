@@ -1,0 +1,18 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[adr-2]]
+= 9.2 ADR-2: Confluence REST API v2, with one v1 exception
+
+*Status*: accepted
+
+*Context*: Confluence Cloud offers v1 and v2. v1 is feature-complete but on the way out; v2 is the
+documented future and has no endpoint for creating attachments.
+
+*Decision*: Generate the client from the OpenAPI v2 specification. Keep exactly one v1 operation:
+`+PUT /rest/api/content/{id}/child/attachment+`.
+
+*Consequences*: The client stays aligned with the contract Atlassian maintains, at the cost of
+supporting Cloud only — Server and Data Center are out. The v1 exception is a known, isolated risk
+tracked upstream as
+https://jira.atlassian.com/browse/CONFCLOUD-77196[CONFCLOUD-77196], which sits in *Future
+Consideration* without an ETA. The operation is not deprecated, so the exception is stable for now.

@@ -1,0 +1,5 @@
+# Keep the launcher scripts' line endings stable regardless of the checkout
+# platform: the bash script needs LF to run, the PowerShell script is fine
+# with either but CRLF is conventional on Windows.
+/cli/scripts/atlassian-cli text eol=lf
+/cli/scripts/atlassian-cli.ps1 text eol=crlf

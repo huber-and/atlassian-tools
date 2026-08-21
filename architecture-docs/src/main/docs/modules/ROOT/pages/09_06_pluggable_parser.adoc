@@ -1,0 +1,19 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[adr-6]]
+= 9.6 ADR-6: Pluggable parser via a class name, resolved defensively
+
+*Status*: accepted (0.2.3)
+
+*Context*: The Antora parser is the only source-format implementation, but the interface was
+already there. Making it configurable turns the library into something reusable for other formats.
+
+*Decision*: `Configuration.parserClass` holds a *fully qualified class name as a String*, resolved
+at runtime. The class is loaded without running its static initializers and is only instantiated
+after it has been verified to implement `Parser`. The thread context class loader is tried first,
+falling back to the library's own.
+
+*Consequences*: A typo fails the build with a clear message instead of executing unrelated code.
+A `Class<?>` parameter was rejected for two reasons: Maven's converter resolves such a value in
+the Maven core class realm, which cannot see plugin-realm classes, and it initializes the class
+while converting — running code before any type check.

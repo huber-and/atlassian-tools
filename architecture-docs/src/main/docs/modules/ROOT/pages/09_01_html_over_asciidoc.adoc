@@ -1,0 +1,18 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[adr-1]]
+= 9.1 ADR-1: Consume generated HTML instead of AsciiDoc sources
+
+*Status*: accepted
+
+*Context*: Existing tools in this space convert AsciiDoc directly and talk to Confluence
+themselves. That is the obvious approach — one step fewer, no intermediate artifact.
+
+*Decision*: The publisher consumes the *HTML site that Antora generates*, reading the navigation
+panel of `index.html` for the structure.
+
+*Consequences*: Antora's module resolution, versioning and cross-reference handling come for free,
+including multi-module sites that would be substantial work to re-implement. The price is a
+dependency on the HTML structure of Antora's default UI — an implicit contract that can break on
+a UI upgrade (see xref:11_technical_risks.adoc[]) — and the requirement that a site build runs
+first.

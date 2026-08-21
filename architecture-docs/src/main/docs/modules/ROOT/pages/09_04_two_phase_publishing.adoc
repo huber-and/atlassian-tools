@@ -1,0 +1,17 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[adr-4]]
+= 9.4 ADR-4: Two-phase publishing
+
+*Status*: accepted
+
+*Context*: A link may point into a space that a different mapper publishes. Expressing it as a
+Confluence page link needs the target's title and space key.
+
+*Decision*: Parse *all* mappers first, build one link index over all page trees, and only then
+write to Confluence.
+
+*Consequences*: Cross-space links resolve correctly regardless of mapper order. The whole page
+structure of all mappers is held in memory before anything is written — acceptable for
+documentation-sized inputs. A mapper that fails to parse is missing from the index, so links into
+it become `UNRESOLVED` rather than silently wrong.

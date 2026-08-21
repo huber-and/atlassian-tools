@@ -13,6 +13,10 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Overrides the read-only default above: this job also uploads the CLI's shaded jar as a
+    # release asset, which needs contents:write. Nothing else in the job needs the extra scope.
+    permissions:
+      contents: write
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Set up JDK 21
@@ -34,3 +38,10 @@ jobs:
         MAVEN_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
         MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
         MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+    - name: Attach the CLI's shaded jar to the release
+      # A build byproduct written by maven-shade-plugin's own <outputFile>, not a Maven-deployed
+      # artifact — it never reaches Maven Central, only this release's assets.
+      env:
+        GH_TOKEN: ${{ github.token }}
+        TAG: ${{ github.ref_name }}
+      run: gh release upload "$TAG" "cli/target/atlassian-cli-$TAG-shaded.jar"

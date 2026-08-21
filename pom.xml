@@ -32,6 +32,8 @@
 		<central-publishing.plugin.version>0.11.0</central-publishing.plugin.version>
 		<openapi-generator.plugin.version>7.24.0</openapi-generator.plugin.version>
 		<frontend.plugin.version>2.0.2</frontend.plugin.version>
+		<shade.plugin.version>3.6.1</shade.plugin.version>
+		<jar.plugin.version>3.5.0</jar.plugin.version>
 		<!-- Minimum Maven version: central-publishing-maven-plugin requires >= 3.9.2 -->
 		<minimum.maven.version>3.9.2</minimum.maven.version>
 
@@ -303,6 +305,7 @@
 		<module>wiki-client</module>
 		<module>wiki-publisher</module>
 		<module>maven-plugin</module>
+		<module>cli</module>
 		<module>architecture-docs</module>
 	</modules>
 

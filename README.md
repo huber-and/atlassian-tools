@@ -53,7 +53,20 @@ A Maven plugin that brings the power of the `wiki-publisher` directly into your 
   - Flexible configuration for mapping local directories to Confluence spaces.
   - Secure credential management via Maven `settings.xml`.
 
-### 4. `architecture-docs`
+### 4. `atlassian-cli`
+**Standalone CLI**
+A dependency-free command-line tool for publishing documentation to Confluence outside Maven —
+for Gradle projects, plain scripts, and non-Maven CI pipelines. A thin wrapper around
+`wiki-publisher`: no functionality lives here that isn't already in that library.
+- **Features**:
+  - Single self-contained executable jar (no runtime dependencies to resolve).
+  - Single- or multi-mapper publishing (a YAML `--config` file for several spaces at once).
+  - No plaintext password flag — credentials come from environment variables, a
+    permission-checked file, or an interactive prompt.
+  - Same pluggable-parser mechanism as `wiki-publisher`, extensible via `--plugin-dir`.
+- See [`cli/README.md`](cli/README.md) for the full option reference.
+
+### 5. `architecture-docs`
 **Architecture Documentation** — 📖 [read the site](https://huber-and.github.io/atlassian-tools) · 🔗 [see it published in Confluence](https://the-hubers.atlassian.net/wiki/spaces/AT/pages/65437698/Architecture)
 The architecture documentation of this project, written in AsciiDoc following the
 [arc42](https://arc42.org/) template, built into an Antora site and published to Confluence by
@@ -140,6 +153,20 @@ Pages are deleted into the trash, never purged, so anything removed by mistake c
 ```bash
 mvn atlassian:publish -Datlassian.skip=true
 ```
+
+### Using the CLI
+
+No Maven required. Easiest via the launcher script, which always runs the latest release:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/huber-and/atlassian-tools/main/cli/scripts/atlassian-cli -o atlassian-cli
+chmod +x atlassian-cli
+./atlassian-cli --url https://your-domain.atlassian.net/wiki --space-key DOCS --path src/docs/site
+```
+
+A PowerShell equivalent is available for Windows. See [`cli/README.md`](cli/README.md) for the
+full option reference, the Windows launcher, multi-space publishing via a YAML `--config` file,
+and how credentials are resolved.
 
 ## Building from Source
 

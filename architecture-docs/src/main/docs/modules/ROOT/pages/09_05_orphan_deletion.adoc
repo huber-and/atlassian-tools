@@ -1,0 +1,18 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[adr-5]]
+= 9.5 ADR-5: Orphan deletion opt-out, into the trash, scoped to a root page
+
+*Status*: accepted
+
+*Context*: Keeping the space in sync requires deleting pages that vanished locally. Deletion is
+also the one operation that can destroy someone else's work.
+
+*Decision*: Three safeguards at once — deletion is scoped to the descendants of the configured
+`root`, it moves pages to the *trash* instead of purging, and `deleteOrphans=false` reports
+without deleting. Without a `root`, orphan detection is skipped entirely.
+
+*Consequences*: The destructive path is previewable in a real build, reversible in Confluence, and
+cannot reach outside the documentation's own subtree. `deleteOrphans` defaults to `true`, because
+a sync tool that does not sync deletions quietly accumulates stale pages — the default is the
+useful behaviour, and the safety net is that it cannot leave the root.

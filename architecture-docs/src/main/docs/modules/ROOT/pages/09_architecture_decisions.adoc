@@ -3,121 +3,14 @@ ifndef::imagesdir[:imagesdir: ../images]
 [[section-design-decisions]]
 = 9. Architecture Decisions
 
-[[adr-1]]
-== ADR-1: Consume generated HTML instead of AsciiDoc sources
+Each significant decision gets its own page: context, decision and consequences, so a single
+decision can be read — and linked to — on its own.
 
-*Status*: accepted
-
-*Context*: Existing tools in this space convert AsciiDoc directly and talk to Confluence
-themselves. That is the obvious approach — one step fewer, no intermediate artifact.
-
-*Decision*: The publisher consumes the *HTML site that Antora generates*, reading the navigation
-panel of `index.html` for the structure.
-
-*Consequences*: Antora's module resolution, versioning and cross-reference handling come for free,
-including multi-module sites that would be substantial work to re-implement. The price is a
-dependency on the HTML structure of Antora's default UI — an implicit contract that can break on
-a UI upgrade (see xref:11_technical_risks.adoc[]) — and the requirement that a site build runs
-first.
-
-[[adr-2]]
-== ADR-2: Confluence REST API v2, with one v1 exception
-
-*Status*: accepted
-
-*Context*: Confluence Cloud offers v1 and v2. v1 is feature-complete but on the way out; v2 is the
-documented future and has no endpoint for creating attachments.
-
-*Decision*: Generate the client from the OpenAPI v2 specification. Keep exactly one v1 operation:
-`+PUT /rest/api/content/{id}/child/attachment+`.
-
-*Consequences*: The client stays aligned with the contract Atlassian maintains, at the cost of
-supporting Cloud only — Server and Data Center are out. The v1 exception is a known, isolated risk
-tracked upstream as
-https://jira.atlassian.com/browse/CONFCLOUD-77196[CONFCLOUD-77196], which sits in *Future
-Consideration* without an ETA. The operation is not deprecated, so the exception is stable for now.
-
-[[adr-3]]
-== ADR-3: Content hash in a page property for change detection
-
-*Status*: accepted
-
-*Context*: Idempotence is the top quality goal. The naive approach — compare the new body against
-the body Confluence returns — does not work, because Confluence normalises what it stores, so the
-comparison never matches and every build rewrites every page.
-
-*Decision*: Hash our own transformation output and store the hash in the page property
-`page-content-hash`. Compare hashes, not bodies. Attachments carry their hash in the upload
-comment, prefixed `sha256:`.
-
-*Consequences*: Unchanged pages produce no new version, no notification and no history entry.
-The state lives in Confluence, so it survives a fresh checkout and works across machines and CI
-runners. Cost: one extra property read per page, and the property is visible to anyone inspecting
-the page.
-
-[[adr-4]]
-== ADR-4: Two-phase publishing
-
-*Status*: accepted
-
-*Context*: A link may point into a space that a different mapper publishes. Expressing it as a
-Confluence page link needs the target's title and space key.
-
-*Decision*: Parse *all* mappers first, build one link index over all page trees, and only then
-write to Confluence.
-
-*Consequences*: Cross-space links resolve correctly regardless of mapper order. The whole page
-structure of all mappers is held in memory before anything is written — acceptable for
-documentation-sized inputs. A mapper that fails to parse is missing from the index, so links into
-it become `UNRESOLVED` rather than silently wrong.
-
-[[adr-5]]
-== ADR-5: Orphan deletion opt-out, into the trash, scoped to a root page
-
-*Status*: accepted
-
-*Context*: Keeping the space in sync requires deleting pages that vanished locally. Deletion is
-also the one operation that can destroy someone else's work.
-
-*Decision*: Three safeguards at once — deletion is scoped to the descendants of the configured
-`root`, it moves pages to the *trash* instead of purging, and `deleteOrphans=false` reports
-without deleting. Without a `root`, orphan detection is skipped entirely.
-
-*Consequences*: The destructive path is previewable in a real build, reversible in Confluence, and
-cannot reach outside the documentation's own subtree. `deleteOrphans` defaults to `true`, because
-a sync tool that does not sync deletions quietly accumulates stale pages — the default is the
-useful behaviour, and the safety net is that it cannot leave the root.
-
-[[adr-6]]
-== ADR-6: Pluggable parser via a class name, resolved defensively
-
-*Status*: accepted (0.2.3)
-
-*Context*: The Antora parser is the only source-format implementation, but the interface was
-already there. Making it configurable turns the library into something reusable for other formats.
-
-*Decision*: `Configuration.parserClass` holds a *fully qualified class name as a String*, resolved
-at runtime. The class is loaded without running its static initializers and is only instantiated
-after it has been verified to implement `Parser`. The thread context class loader is tried first,
-falling back to the library's own.
-
-*Consequences*: A typo fails the build with a clear message instead of executing unrelated code.
-A `Class<?>` parameter was rejected for two reasons: Maven's converter resolves such a value in
-the Maven core class realm, which cannot see plugin-realm classes, and it initializes the class
-while converting — running code before any type check.
-
-[[adr-7]]
-== ADR-7: Split into three artifacts
-
-*Status*: accepted
-
-*Context*: Everything could live in the Maven plugin. That would be less to publish and less to
-version.
-
-*Decision*: Three artifacts along the axis of what each knows about — `wiki-client` (HTTP API),
-`wiki-publisher` (domain), `atlassian-maven-plugin` (build adapter).
-
-*Consequences*: `wiki-publisher` is usable from any JVM application, which is what makes a future
-CLI or Gradle plugin a small addition rather than a rewrite. The rule that keeps this true is that
-no Maven type may leak into the publisher. Cost: three artifacts to release, though a single
-`+${revision}+` keeps them in lockstep.
+* xref:09_01_html_over_asciidoc.adoc[ADR-1: Consume generated HTML instead of AsciiDoc sources]
+* xref:09_02_confluence_api_v2.adoc[ADR-2: Confluence REST API v2, with one v1 exception]
+* xref:09_03_content_hash.adoc[ADR-3: Content hash in a page property for change detection]
+* xref:09_04_two_phase_publishing.adoc[ADR-4: Two-phase publishing]
+* xref:09_05_orphan_deletion.adoc[ADR-5: Orphan deletion opt-out, into the trash, scoped to a root page]
+* xref:09_06_pluggable_parser.adoc[ADR-6: Pluggable parser via a class name, resolved defensively]
+* xref:09_07_three_artifacts.adoc[ADR-7: Split into three artifacts]
+* xref:09_08_standalone_cli.adoc[ADR-8: Standalone CLI as a thin adapter, not a rewrite]

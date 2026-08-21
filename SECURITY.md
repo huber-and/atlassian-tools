@@ -45,6 +45,14 @@ message, a configuration dump — is treated as a security issue. Accordingly, `
 `-D` arguments and end up in a CI log; both are excluded from `Configuration.toString()`; and only
 the host of the target URL is logged, never the full URL.
 
+The standalone `atlassian-cli` module has no `--password` option either, for a related but
+different reason: a real process's argument list stays visible via shell history and via
+`ps`/`/proc/<pid>/cmdline` for as long as it runs, which is a broader exposure than a CI log entry.
+Its credential order is environment variables, then a `--credentials-file` that is rejected unless
+its permissions are owner-only, then an interactive prompt shown only when a terminal is attached.
+A way to make the CLI accept a secret through any other channel — a flag, an unchecked file, a
+prompt shown in a non-interactive run — is a security issue.
+
 **Untrusted content from the documentation source.** The parser reads HTML that the project did
 not write: hrefs in the navigation, `img src` attributes in page bodies. Every one of those values
 is resolved through `SafePaths`, which rejects absolute paths and paths escaping the configured

@@ -1,0 +1,19 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[adr-3]]
+= 9.3 ADR-3: Content hash in a page property for change detection
+
+*Status*: accepted
+
+*Context*: Idempotence is the top quality goal. The naive approach — compare the new body against
+the body Confluence returns — does not work, because Confluence normalises what it stores, so the
+comparison never matches and every build rewrites every page.
+
+*Decision*: Hash our own transformation output and store the hash in the page property
+`page-content-hash`. Compare hashes, not bodies. Attachments carry their hash in the upload
+comment, prefixed `sha256:`.
+
+*Consequences*: Unchanged pages produce no new version, no notification and no history entry.
+The state lives in Confluence, so it survives a fresh checkout and works across machines and CI
+runners. Cost: one extra property read per page, and the property is visible to anyone inspecting
+the page.

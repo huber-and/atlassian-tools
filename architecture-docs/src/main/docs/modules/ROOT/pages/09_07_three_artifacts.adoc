@@ -1,0 +1,18 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[adr-7]]
+= 9.7 ADR-7: Split into three artifacts
+
+*Status*: accepted
+
+*Context*: Everything could live in the Maven plugin. That would be less to publish and less to
+version.
+
+*Decision*: Three artifacts along the axis of what each knows about — `wiki-client` (HTTP API),
+`wiki-publisher` (domain), `atlassian-maven-plugin` (build adapter).
+
+*Consequences*: `wiki-publisher` is usable from any JVM application, which is what makes a future
+CLI or Gradle plugin a small addition rather than a rewrite. The rule that keeps this true is that
+no Maven type may leak into the publisher. Cost: three artifacts to release, though a single
+`+${revision}+` keeps them in lockstep. xref:09_08_standalone_cli.adoc[ADR-8] is that future CLI
+arriving.
