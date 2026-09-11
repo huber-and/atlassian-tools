@@ -19,12 +19,14 @@ content:
     # published site would be a dead link to the CI runner's file system. Reading from
     # the commit also matches what Pages should show: the state of main, not of a dirty
     # working tree.
+    #
+    # edit_url is deliberately unset: no "Edit this Page" link on the public site.
     - url: ../
       branches: HEAD
       worktrees: false
       version: main
       start_path: architecture-docs/src/main/docs
-      edit_url: https://github.com/huber-and/atlassian-tools/edit/main/{path}
+      edit_url: ~
 asciidoc:
   attributes:
     sectanchors: true
