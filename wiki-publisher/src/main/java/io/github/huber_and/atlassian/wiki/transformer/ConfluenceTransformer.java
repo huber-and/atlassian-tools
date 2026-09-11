@@ -336,7 +336,7 @@ public class ConfluenceTransformer implements Transformer {
 		}
 		final java.nio.file.Path source;
 		try {
-			source = SafePaths.resolveWithin(page.getSource().getParent(), src);
+			source = resolveImageSource(page, src);
 		} catch (final IllegalArgumentException e) {
 			log.warn("Removing unsafe image src '{}': {}", src, e.getMessage());
 			image.remove();
@@ -362,6 +362,33 @@ public class ConfluenceTransformer implements Transformer {
 		acImage.appendElement("ri:attachment", "ri").attr("ri:filename", attachment.getFileName());
 		image.replaceWith(acImage);
 		log.info("Image is now {}", acImage.parent());
+	}
+
+	/**
+	 * Resolves an image {@code src} relative to the page it appears on.
+	 *
+	 * The containment boundary is wider than the page's own directory: Antora
+	 * collects every image of a component version into one flat {@code _images}
+	 * directory and references it relatively from wherever the page happens to
+	 * sit, so a page in a subdirectory legitimately reaches outside its own
+	 * directory (see issue #25). The boundary is therefore the page's directory
+	 * <em>or</em> any of {@link #resolver}'s mapper roots — the same wider
+	 * boundary {@link LinkResolver} already uses for attachment links — never
+	 * further than that.
+	 *
+	 * @param page the page the image appears on
+	 * @param src  the untrusted {@code src} attribute value
+	 * @return the resolved, normalized path
+	 * @throws IllegalArgumentException if {@code src} is absolute or escapes every
+	 *                                  allowed boundary
+	 */
+	private java.nio.file.Path resolveImageSource(final Page page, final String src) {
+		final var pageDir = page.getSource().getParent();
+		final var candidate = pageDir.resolve(src).normalize();
+		if (SafePaths.isWithin(pageDir, candidate) || resolver.isWithinAnyRoot(candidate)) {
+			return candidate;
+		}
+		throw new IllegalArgumentException("Path escapes root: " + src);
 	}
 
 	/**
