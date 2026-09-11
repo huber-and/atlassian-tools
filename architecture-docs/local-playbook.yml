@@ -15,11 +15,17 @@ content:
 asciidoc:
   attributes:
     sectanchors: true
-output: 
+output:
   dir: ./target/docs
-  destinations: 
-  - provider: archive 
-    path: ./target/architecture-docs.zip 
+  destinations:
+  # Antora 3.2.0 changed file-publisher: once `destinations` is set, the fs
+  # destination implied by `output.dir` is only added if an explicit `fs`
+  # entry (with no path of its own) is present here too. Without this entry,
+  # only the archive below would be produced and target/docs would stay
+  # empty, which is exactly what AntoraParser reads.
+  - provider: fs
+  - provider: archive
+    path: ./target/architecture-docs.zip
 ui:
   supplemental_files: ./supplemental-ui
   bundle:
