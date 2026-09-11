@@ -38,8 +38,5 @@ runtime:
 #      sync: false
 antora:
   extensions:
-    - require: '@djencks/asciidoctor-jsonpath'
-    - require: '@djencks/asciidoctor-antora-indexer'
     - require: '@antora/lunr-extension'
       index_latest_only: true
-      
