@@ -116,7 +116,7 @@ class ConfluenceTransformerTest {
 	// --- link resolution -------------------------------------------------
 
 	/** A two-mapper fixture, mirroring the layout {@link LinkResolverTest} uses. */
-	private record Fixture(ConfluenceTransformer transformer, Page chapter, Path spec) {
+	private record Fixture(ConfluenceTransformer transformer, Page chapter, Page adr, Path spec) {
 	}
 
 	private static Fixture fixture(final Path tmp) throws IOException {
@@ -126,14 +126,52 @@ class ConfluenceTransformerTest {
 		final var adrFile = Files.writeString(Files.createDirectories(docsA.resolve("adr")).resolve("0001.html"), "");
 		final var specFile = Files.writeString(docsA.resolve("spec.pdf"), "pdf");
 		final var otherFile = Files.writeString(docsB.resolve("other.html"), "");
+		// Mirrors Antora's layout: one flat images directory at the mapper root,
+		// referenced relatively from a page that sits one level below it.
+		Files.writeString(Files.createDirectories(docsA.resolve("_images")).resolve("plan.png"), "png");
 		final var chapter = new Page("Chapter 9", chapterFile, null);
+		final var adr = new Page("ADR 1", adrFile, null);
 
-		final var resolver = LinkResolver.of(List.of(
-				new LinkResolver.MapperPages("SPACEA", docsA, "Architecture",
-						List.of(chapter, new Page("ADR 1", adrFile, null))),
-				new LinkResolver.MapperPages("SPACEB", docsB, null,
-						List.of(new Page("Other Doc", otherFile, null)))));
-		return new Fixture(new ConfluenceTransformer(resolver), chapter, specFile);
+		final var resolver = LinkResolver
+				.of(List.of(new LinkResolver.MapperPages("SPACEA", docsA, "Architecture", List.of(chapter, adr)),
+						new LinkResolver.MapperPages("SPACEB", docsB, null, List.of(new Page("Other Doc", otherFile, null)))));
+		return new Fixture(new ConfluenceTransformer(resolver), chapter, adr, specFile);
+	}
+
+	/**
+	 * Regression test for issue #25: a page below the mapper root must still reach
+	 * an image that sits in a sibling directory, as long as it stays inside the
+	 * mapper root.
+	 */
+	@Test
+	void imageInSubdirectoryResolvesAgainstMapperRoot(@TempDir final Path tmp) throws IOException {
+		final var f = fixture(tmp);
+		final var content = Jsoup.parse("<div><img src=\"../_images/plan.png\" alt=\"x\"/></div>").body();
+
+		final var result = f.transformer().transform(f.adr(), content);
+
+		assertEquals(1, result.getAttachments().size());
+		assertEquals(tmp.resolve("docsA/_images/plan.png"), result.getAttachments().getFirst().getSource());
+		assertTrue(result.getContent().contains("ri:filename=\"plan.png\""), result::getContent);
+	}
+
+	/**
+	 * The wider boundary from #25 must stop exactly at the mapper root, not
+	 * beyond it.
+	 */
+	@Test
+	void imageBeyondMapperRootIsStillRejected(@TempDir final Path tmp) throws IOException {
+		final var f = fixture(tmp);
+		// A sibling of docsA/docsB: outside every configured mapper root.
+		Files.writeString(tmp.resolve("outside.png"), "png");
+		final var content = Jsoup.parse("<div><img src=\"../../outside.png\" alt=\"x\"/></div>").body();
+
+		final var result = f.transformer().transform(f.adr(), content);
+
+		assertTrue(result.getAttachments().isEmpty(),
+				"Image outside every mapper root must not become an attachment");
+		assertFalse(result.getContent().contains("outside.png"),
+				() -> "Storage format leaked a path beyond the mapper root: " + result.getContent());
 	}
 
 	@Test

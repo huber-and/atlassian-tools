@@ -18,7 +18,7 @@
 		version bundled with that Node release -->
 		<node.version>v24.19.0</node.version>
 		<npm.version>11.17.0</npm.version>
-		<antora.version>3.1.15</antora.version>
+		<antora.version>3.2.0</antora.version>
 	</properties>
 	<build>
 		<resources>

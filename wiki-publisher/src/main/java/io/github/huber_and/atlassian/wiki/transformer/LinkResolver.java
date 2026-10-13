@@ -202,7 +202,24 @@ public final class LinkResolver {
 		if (lower.endsWith(".html") || lower.endsWith(".htm")) {
 			return false;
 		}
-		return roots.stream().anyMatch(root -> SafePaths.isWithin(root, candidate)) && Files.isRegularFile(candidate);
+		return isWithinAnyRoot(candidate) && Files.isRegularFile(candidate);
+	}
+
+	/**
+	 * Tests whether {@code candidate} lies within any of the configured mapper
+	 * roots.
+	 *
+	 * Shared with {@code ConfluenceTransformer}'s image handling, which needs the
+	 * same wider boundary as attachment links: Antora places every image of a
+	 * component version in one flat directory and references it relatively from
+	 * wherever the page happens to sit, so the containment boundary cannot be the
+	 * page's own directory alone.
+	 *
+	 * @param candidate an already resolved and normalized path
+	 * @return {@code true} if {@code candidate} is inside at least one mapper root
+	 */
+	public boolean isWithinAnyRoot(final Path candidate) {
+		return roots.stream().anyMatch(root -> SafePaths.isWithin(root, candidate));
 	}
 
 	private static Target external() {
