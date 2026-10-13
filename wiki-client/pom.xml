@@ -87,6 +87,7 @@
 								<interfaceOnly>false</interfaceOnly>
 								<useOptional>true</useOptional>
 								<serializationLibrary>jackson</serializationLibrary>
+								<useJackson3>true</useJackson3>
 							</configOptions>
 						</configuration>
 					</execution>
@@ -126,19 +127,14 @@
 		    <groupId>org.jsoup</groupId>
 		    <artifactId>jsoup</artifactId>
 		</dependency>
+		<!-- Jackson 3: Optional and java.time support are built into databind, so the
+		     former jdk8/jsr310 datatype modules are gone. Annotations deliberately stay
+		     on the 2.x coordinates; Jackson 3 has no annotations module of its own. -->
 		<dependency>
-			<groupId>com.fasterxml.jackson.core</groupId>
+			<groupId>tools.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.fasterxml.jackson.datatype</groupId>
-			<artifactId>jackson-datatype-jdk8</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>com.fasterxml.jackson.datatype</groupId>
-			<artifactId>jackson-datatype-jsr310</artifactId>
-		</dependency>
-   		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-annotations</artifactId>
 		</dependency>

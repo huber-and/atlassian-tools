@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import tools.jackson.core.type.TypeReference;
 
 import net.atlassian.wiki.rest.ApiClient;
 import net.atlassian.wiki.rest.ApiException;

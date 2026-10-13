@@ -81,7 +81,7 @@
 			<!-- Parses the multi-mapper "config" file. Part of the Jackson family already
 			     used throughout the project (jackson-bom manages its version), not a new
 			     kind of dependency. -->
-			<groupId>com.fasterxml.jackson.dataformat</groupId>
+			<groupId>tools.jackson.dataformat</groupId>
 			<artifactId>jackson-dataformat-yaml</artifactId>
 		</dependency>
 		<dependency>

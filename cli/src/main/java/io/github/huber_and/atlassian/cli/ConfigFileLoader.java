@@ -18,8 +18,10 @@ package io.github.huber_and.atlassian.cli;
 import java.io.IOException;
 import java.nio.file.Path;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.dataformat.yaml.YAMLMapper;
 
 /**
  * Reads a {@code --config} file into a {@link ConfigFile}.
@@ -28,7 +30,11 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
  */
 public final class ConfigFileLoader {
 
-	private static final ObjectMapper MAPPER = new ObjectMapper(new YAMLFactory());
+	// Jackson 3 ignores unknown properties by default; a typo in the config file
+	// must fail loudly instead of silently dropping the setting.
+	private static final ObjectMapper MAPPER = YAMLMapper.builder()
+			.enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+			.build();
 
 	private ConfigFileLoader() {
 	}
@@ -42,6 +48,11 @@ public final class ConfigFileLoader {
 	 *                      expected shape
 	 */
 	public static ConfigFile load(final Path file) throws IOException {
-		return MAPPER.readValue(file.toFile(), ConfigFile.class);
+		try {
+			return MAPPER.readValue(file.toFile(), ConfigFile.class);
+		} catch (final JacksonException e) {
+			// Jackson 3 exceptions are unchecked, read errors included
+			throw new IOException(e.getMessage(), e);
+		}
 	}
 }
