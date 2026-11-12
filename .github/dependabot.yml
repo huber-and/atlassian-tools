@@ -13,3 +13,8 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    ignore:
+      # Stay on Maven 3.9.x: 3.10 scopes server credentials to declared origins,
+      # which breaks the Central Portal deploy (HTTP 401) without extra settings.
+      - dependency-name: "org.apache.maven:apache-maven"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
