@@ -23,12 +23,12 @@
 		<flatten.plugin.version>1.8.0</flatten.plugin.version>
 		<gpg.plugin.version>3.2.8</gpg.plugin.version>
 		<javadoc.plugin.version>3.12.0</javadoc.plugin.version>
-		<maven-plugin.version>3.9.0</maven-plugin.version>
+		<maven-plugin.version>3.10.0</maven-plugin.version>
 		<source.plugin.version>3.4.0</source.plugin.version>
-		<surefire.plugin.version>3.5.6</surefire.plugin.version>
-		<compiler.plugin.version>3.15.0</compiler.plugin.version>
+		<surefire.plugin.version>3.6.0</surefire.plugin.version>
+		<compiler.plugin.version>3.16.0</compiler.plugin.version>
 		<jacoco.plugin.version>0.8.15</jacoco.plugin.version>
-		<maven-plugin-tools.version>3.15.2</maven-plugin-tools.version>
+		<maven-plugin-tools.version>3.16.0</maven-plugin-tools.version>
 		<central-publishing.plugin.version>0.11.0</central-publishing.plugin.version>
 		<openapi-generator.plugin.version>7.25.0</openapi-generator.plugin.version>
 		<frontend.plugin.version>2.0.2</frontend.plugin.version>
@@ -38,15 +38,15 @@
 		<minimum.maven.version>3.9.2</minimum.maven.version>
 
 		<!-- Shared dependency versions, applied via dependencyManagement below -->
-		<slf4j.version>2.0.19</slf4j.version>
-		<lombok.version>1.18.46</lombok.version>
+		<slf4j.version>2.0.20</slf4j.version>
+		<lombok.version>1.18.48</lombok.version>
 		<jsoup.version>1.23.2</jsoup.version>
-		<commons-lang3.version>3.20.0</commons-lang3.version>
+		<commons-lang3.version>3.21.0</commons-lang3.version>
 		<jackson.version>3.2.3</jackson.version>
 		<junit.version>6.1.3</junit.version>
 		<jakarta-annotation.version>3.0.0</jakarta-annotation.version>
 		<swagger-annotations.version>2.2.55</swagger-annotations.version>
-		<httpclient5.version>5.6.4</httpclient5.version>
+		<httpclient5.version>5.6.5</httpclient5.version>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
