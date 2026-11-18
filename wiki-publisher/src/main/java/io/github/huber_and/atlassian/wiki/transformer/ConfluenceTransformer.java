@@ -200,8 +200,9 @@ public class ConfluenceTransformer implements Transformer {
 	 * Replaces every {@code span.jira} holding an issue key by the Confluence Jira
 	 * issue macro, so tickets show up with their status instead of as plain text.
 	 *
-	 * The macro is emitted with the key only. Without a {@code server} parameter
-	 * Confluence uses the default Jira site of the instance. A span whose text is
+	 * The macro is emitted with the key and {@code showSummary=false}, so only key
+	 * and status are shown. Without a {@code server} parameter Confluence uses the
+	 * default Jira site of the instance. A span whose text is
 	 * not exactly an issue key is left untouched.
 	 *
 	 * @param content the HTML content to scan
@@ -216,6 +217,8 @@ public class ConfluenceTransformer implements Transformer {
 			final var macro = new Element("ac:structured-macro", "ac");
 			macro.attr("ac:name", "jira");
 			macro.appendElement("ac:parameter", "ac").attr("ac:name", "key").appendText(key);
+			// Key and status only: the full summary of every ticket makes running text restless.
+			macro.appendElement("ac:parameter", "ac").attr("ac:name", "showSummary").appendText("false");
 			span.replaceWith(macro);
 		});
 	}

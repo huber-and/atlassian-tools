@@ -349,7 +349,8 @@ class ConfluenceTransformerTest {
 				.replaceAll(">\\s+<", "><");
 
 		for (final var key : List.of("XCLOUD-1785", "CORE-661", "IT-49")) {
-			assertTrue(storage.contains(JIRA_MACRO + key + "</ac:parameter></ac:structured-macro>"),
+			assertTrue(storage.contains(JIRA_MACRO + key
+					+ "</ac:parameter><ac:parameter ac:name=\"showSummary\">false</ac:parameter></ac:structured-macro>"),
 					() -> "No Jira macro for " + key + ": " + storage);
 		}
 		assertFalse(storage.contains("class=\"jira\""), () -> "span.jira leaked: " + storage);
