@@ -66,6 +66,9 @@ public class ConfluenceTransformer implements Transformer {
 			"java", "javafx", "javascript", "json", "kotlin", "perl", "php", "powershell", "py", "python", "ruby",
 			"sass", "scala", "shell", "sql", "swift", "tex", "text", "typescript", "vb", "xml", "yaml", "yml");
 
+	/** A Jira issue key such as {@code XCLOUD-1785}; anything else is not turned into a macro. */
+	private static final Pattern JIRA_KEY_PATTERN = Pattern.compile("[A-Z][A-Z0-9_]+-[0-9]+");
+
 	/**
 	 * Maps the five Asciidoctor admonition types onto the four Confluence
 	 * admonition macros, keeping the urgency levels visually distinct: informational
@@ -117,6 +120,7 @@ public class ConfluenceTransformer implements Transformer {
 		}
 		transformAdmonitions(content);
 		transformAnchors(content);
+		transformJiraKeys(content);
 		transformLinks(page, content, result);
 		transformImages(page, content, result);
 		transformCodeBlocks(content);
@@ -189,6 +193,30 @@ public class ConfluenceTransformer implements Transformer {
 			macro.appendElement("ac:parameter", "ac").attr("ac:name", "").appendText(id);
 			element.before(macro);
 			element.removeAttr("id");
+		});
+	}
+
+	/**
+	 * Replaces every {@code span.jira} holding an issue key by the Confluence Jira
+	 * issue macro, so tickets show up with their status instead of as plain text.
+	 *
+	 * The macro is emitted with the key only. Without a {@code server} parameter
+	 * Confluence uses the default Jira site of the instance. A span whose text is
+	 * not exactly an issue key is left untouched.
+	 *
+	 * @param content the HTML content to scan
+	 */
+	private void transformJiraKeys(final Element content) {
+		content.select("span.jira").forEach(span -> {
+			final var key = span.text().strip();
+			if (!JIRA_KEY_PATTERN.matcher(key).matches()) {
+				log.warn("Leaving span.jira unchanged, '{}' is not a Jira issue key", key);
+				return;
+			}
+			final var macro = new Element("ac:structured-macro", "ac");
+			macro.attr("ac:name", "jira");
+			macro.appendElement("ac:parameter", "ac").attr("ac:name", "key").appendText(key);
+			span.replaceWith(macro);
 		});
 	}
 

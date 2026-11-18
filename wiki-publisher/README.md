@@ -16,7 +16,7 @@
 - **Pluggable Parser:** Replace the built-in parser with your own `Parser` implementation.
 - **Multi-Space Mapping:** Configure multiple mappings to publish different documentation sets to different Confluence spaces.
 - **Hierarchy Preservation:** Maintains the page hierarchy from your local documentation when publishing to Confluence.
-- **Content Transformation:** Automatically transforms local content into the Confluence Storage Format, including internal links, attachments and admonitions.
+- **Content Transformation:** Automatically transforms local content into the Confluence Storage Format, including internal links, attachments, admonitions and Jira issue keys (`<span class="jira">KEY-1</span>` becomes the Jira issue macro).
 - **Orphan Cleanup:** Optionally moves pages that no longer exist locally to the Confluence trash.
 
 ## Installation

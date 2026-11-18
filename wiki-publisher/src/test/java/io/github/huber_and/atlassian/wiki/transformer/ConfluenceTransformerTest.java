@@ -336,6 +336,38 @@ class ConfluenceTransformerTest {
 				() -> "Link inside the admonition must be resolved too: " + storage);
 	}
 
+	private static final String JIRA_MACRO = "<ac:structured-macro ac:name=\"jira\"><ac:parameter ac:name=\"key\">";
+
+	@Test
+	void jiraKeySpanBecomesJiraMacroInTextHeadingAndTable() {
+		final var page = new Page("Page", Path.of("/tmp/page.html"), null);
+		final var html = "<p>Tracked in <span class=\"jira\">XCLOUD-1785</span>.</p>"
+				+ "<h2>Decision <span class=\"jira\">CORE-661</span></h2>"
+				+ "<table><tr><td><span class=\"jira\">IT-49</span></td></tr></table>";
+
+		final var storage = transformer.transform(page, Jsoup.parse(html).body()).getContent()
+				.replaceAll(">\\s+<", "><");
+
+		for (final var key : List.of("XCLOUD-1785", "CORE-661", "IT-49")) {
+			assertTrue(storage.contains(JIRA_MACRO + key + "</ac:parameter></ac:structured-macro>"),
+					() -> "No Jira macro for " + key + ": " + storage);
+		}
+		assertFalse(storage.contains("class=\"jira\""), () -> "span.jira leaked: " + storage);
+		assertFalse(storage.contains("ac:name=\"server"), () -> "Unexpected server parameter: " + storage);
+	}
+
+	@Test
+	void jiraSpanWithoutIssueKeyIsLeftUnchanged() {
+		final var page = new Page("Page", Path.of("/tmp/page.html"), null);
+		final var html = "<p><span class=\"jira\">not a key</span> and <span class=\"jira\">ADR-XCLOUD-014</span></p>";
+
+		final var storage = transformer.transform(page, Jsoup.parse(html).body()).getContent();
+
+		assertFalse(storage.contains("ac:name=\"jira\""), () -> "Must not create a macro: " + storage);
+		assertTrue(storage.contains("not a key"), () -> storage);
+		assertTrue(storage.contains("ADR-XCLOUD-014"), () -> storage);
+	}
+
 	private String macroOf(final Page page, final String type) {
 		final var storage = transformer.transform(page, admonition(type, null)).getContent();
 		final var marker = "ac:name=\"";
