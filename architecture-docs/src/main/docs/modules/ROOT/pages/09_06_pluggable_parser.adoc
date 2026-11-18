@@ -3,7 +3,7 @@ ifndef::imagesdir[:imagesdir: ../images]
 [[adr-6]]
 = 9.6 ADR-6: Pluggable parser via a class name, resolved defensively
 
-*Status*: accepted (0.2.3)
+*Status*: accepted (0.3.0)
 
 *Context*: The Antora parser is the only source-format implementation, but the interface was
 already there. Making it configurable turns the library into something reusable for other formats.

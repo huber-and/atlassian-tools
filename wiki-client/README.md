@@ -21,7 +21,7 @@ Add the dependency to your `pom.xml`. The badge above always shows the latest re
 <dependency>
     <groupId>io.github.huber-and.atlassian</groupId>
     <artifactId>wiki-client</artifactId>
-    <version>0.2.2</version>
+    <version>0.3.0</version>
 </dependency>
 ```
 

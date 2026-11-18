@@ -47,7 +47,7 @@ ifndef::imagesdir[:imagesdir: ../images]
 
 | Parser
 | The interface abstracting the source format. `AntoraParser` is the built-in implementation;
-  another can be named via `parserClass` (since 0.2.3).
+  another can be named via `parserClass` (since 0.3.0).
 
 | Root page
 | An existing Confluence page under which a mapper's content is created. Also the scope boundary

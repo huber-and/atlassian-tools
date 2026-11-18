@@ -15,7 +15,7 @@ The normal case. Add the plugin, point a mapper at the generated site, keep cred
 <plugin>
     <groupId>io.github.huber-and.atlassian</groupId>
     <artifactId>atlassian-maven-plugin</artifactId>
-    <version>0.2.2</version>
+    <version>0.3.0</version>
     <configuration>
         <url>https://your-domain.atlassian.net/wiki</url>
         <serverId>your-domain.atlassian.net</serverId>
@@ -119,5 +119,5 @@ Or on the command line, for a one-off run:
 mvn atlassian:publish -Dpage.parser=com.example.docs.SingleFileParser
 ----
 
-IMPORTANT: `parserClass` requires version 0.2.3 or later. In 0.2.2 the parser is fixed to
+IMPORTANT: `parserClass` requires version 0.3.0 or later. In 0.2.2 the parser is fixed to
 `AntoraParser`.
