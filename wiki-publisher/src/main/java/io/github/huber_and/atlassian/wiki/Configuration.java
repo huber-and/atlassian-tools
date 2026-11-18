@@ -73,6 +73,13 @@ public class Configuration {
 	private String parserClass = AntoraParser.class.getName();
 
 	/**
+	 * Base URL of Jira, e.g. {@code https://example.atlassian.net}. When set, Jira
+	 * issue keys become plain links to {@code <jiraUrl>/browse/KEY} instead of the
+	 * Confluence Jira macro.
+	 */
+	private String jiraUrl;
+
+	/**
 	 * Mapper configuration that defines how local content maps to Confluence
 	 * spaces.
 	 *

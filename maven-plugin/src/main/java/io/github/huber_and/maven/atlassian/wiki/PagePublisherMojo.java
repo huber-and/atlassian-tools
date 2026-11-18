@@ -125,6 +125,15 @@ public class PagePublisherMojo extends AbstractMojo {
 	@Parameter(property = "page.parser", defaultValue = "io.github.huber_and.atlassian.wiki.parser.AntoraParser", required = true)
 	private String parserClass;
 
+	/**
+	 * Base URL of Jira, e.g. {@code https://example.atlassian.net}. When set, Jira
+	 * issue keys ({@code span.jira}) become plain links to
+	 * {@code <jiraUrl>/browse/KEY}; otherwise they become the Confluence Jira macro
+	 * showing key and status.
+	 */
+	@Parameter(property = "atlassian.jiraUrl")
+	private String jiraUrl;
+
 	/** Maven helper for decrypting passwords stored in {@code settings.xml}. */
 	private final SettingsDecrypter settingsDecrypter;
 
@@ -160,6 +169,7 @@ public class PagePublisherMojo extends AbstractMojo {
 		getLog().info("Publish pages to " + uri.getHost());
 		final var config = new Configuration();
 		config.setParserClass(parserClass);
+		config.setJiraUrl(jiraUrl);
 		config.setUrl(url);
 		config.setMappers(mappers);
 		if (StringUtils.isBlank(username)) {

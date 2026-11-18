@@ -80,6 +80,9 @@ public class ConfluenceTransformer implements Transformer {
 	/** Resolves hrefs to Confluence link targets. */
 	private final LinkResolver resolver;
 
+	/** Jira base URL without trailing slash; {@code null} emits the Jira macro instead of links. */
+	private final String jiraUrl;
+
 	/**
 	 * Creates a transformer that cannot resolve internal links.
 	 *
@@ -96,7 +99,27 @@ public class ConfluenceTransformer implements Transformer {
 	 * @param resolver the link index built for this publish run
 	 */
 	public ConfluenceTransformer(final LinkResolver resolver) {
+		this(resolver, null);
+	}
+
+	/**
+	 * Creates a transformer that resolves internal links and renders Jira issue keys
+	 * as plain links when a Jira URL is given.
+	 *
+	 * @param resolver the link index built for this publish run
+	 * @param jiraUrl  base URL of Jira, or blank to emit the Jira macro
+	 * @throws IllegalArgumentException if the Jira URL is not an http(s) URL
+	 */
+	public ConfluenceTransformer(final LinkResolver resolver, final String jiraUrl) {
 		this.resolver = resolver;
+		if (StringUtils.isBlank(jiraUrl)) {
+			this.jiraUrl = null;
+		} else if (jiraUrl.startsWith("https://") || jiraUrl.startsWith("http://")) {
+			final var trimmed = jiraUrl.strip();
+			this.jiraUrl = trimmed.endsWith("/") ? trimmed.substring(0, trimmed.length() - 1) : trimmed;
+		} else {
+			throw new IllegalArgumentException("jiraUrl must be an http(s) URL: " + jiraUrl);
+		}
 	}
 
 	/**
@@ -202,7 +225,8 @@ public class ConfluenceTransformer implements Transformer {
 	 *
 	 * The macro is emitted with the key and {@code showSummary=false}, so only key
 	 * and status are shown. Without a {@code server} parameter Confluence uses the
-	 * default Jira site of the instance. A span whose text is
+	 * default Jira site of the instance. With a configured Jira URL the key becomes a
+	 * plain link to the issue instead. A span whose text is
 	 * not exactly an issue key is left untouched.
 	 *
 	 * @param content the HTML content to scan
@@ -212,6 +236,10 @@ public class ConfluenceTransformer implements Transformer {
 			final var key = span.text().strip();
 			if (!JIRA_KEY_PATTERN.matcher(key).matches()) {
 				log.warn("Leaving span.jira unchanged, '{}' is not a Jira issue key", key);
+				return;
+			}
+			if (jiraUrl != null) {
+				span.replaceWith(new Element("a").attr("href", jiraUrl + "/browse/" + key).text(key));
 				return;
 			}
 			final var macro = new Element("ac:structured-macro", "ac");

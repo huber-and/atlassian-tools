@@ -54,6 +54,9 @@ public class CliOptions {
 	/** Fully qualified name of the {@code Parser} implementation to use. */
 	private String parserClass;
 
+	/** Jira base URL; issue keys become plain links instead of the Jira macro. */
+	private String jiraUrl;
+
 	/** Dry-run mode, passed straight through to {@code Configuration.debug}. */
 	private boolean debug;
 

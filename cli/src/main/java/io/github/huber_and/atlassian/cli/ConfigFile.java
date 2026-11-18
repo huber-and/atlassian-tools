@@ -37,6 +37,9 @@ public class ConfigFile {
 	/** Overridden by {@code --parser-class} when both are given. */
 	private String parserClass;
 
+	/** Overridden by {@code --jira-url} when both are given. */
+	private String jiraUrl;
+
 	/** The mappers to publish; used as-is in multi-mapper mode. */
 	private List<Configuration.Mapper> mappers = new ArrayList<>();
 }

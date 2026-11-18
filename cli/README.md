@@ -98,6 +98,7 @@ java -jar atlassian-cli.jar --url https://confluence.example.com --config publis
 ```yaml
 # publish.yaml
 parserClass: io.github.huber_and.atlassian.wiki.parser.AntoraParser
+jiraUrl: https://example.atlassian.net   # optional: plain links instead of the Jira macro
 mappers:
   - spaceKey: DOCS
     path: build/site
@@ -108,7 +109,7 @@ mappers:
 ```
 
 `--config` and the single-mapper flags (`--space-key`/`--path`/`--root`/`--delete-orphans`) are
-mutually exclusive. `--url` and `--parser-class` given on the command line override the
+mutually exclusive. `--url`, `--parser-class` and `--jira-url` given on the command line override the
 corresponding value in the file.
 
 ## Options
@@ -122,6 +123,7 @@ corresponding value in the file.
 | `--delete-orphans` / `--no-delete-orphans` | Whether pages that no longer exist locally are moved to the trash. Defaults to `true`, matching `wiki-publisher`. |
 | `--config <file.yaml>` | Read one or more mappers from a YAML file. Cannot be combined with the single-mapper flags above. |
 | `--parser-class <fqcn>` | Fully qualified name of the `Parser` implementation to use. Defaults to the built-in Antora parser. |
+| `--jira-url <url>` | Jira base URL. When set, Jira issue keys become plain links to `<url>/browse/KEY` instead of the Jira macro showing key and status. |
 | `--plugin-dir <dir>` | Directory of additional jars searched for `--parser-class`. See "Custom Parser" below. |
 | `--username <name>` | Confluence account name. Not a secret — may be given on the command line. |
 | `--credentials-file <file>` | File with `username`/`password` entries. Rejected unless it is readable/writable by its owner only (`chmod 600`). |

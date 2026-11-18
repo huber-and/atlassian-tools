@@ -54,6 +54,7 @@ public final class ConfigurationBuilder {
 		if (StringUtils.isNotBlank(parserClass)) {
 			config.setParserClass(parserClass);
 		}
+		config.setJiraUrl(StringUtils.defaultIfBlank(options.getJiraUrl(), fileConfig.getJiraUrl()));
 		config.setDebug(options.isDebug());
 		config.setUsername(credentials.username());
 		config.setPassword(credentials.password());

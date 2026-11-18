@@ -37,7 +37,7 @@ public final class ArgumentParser {
 	/** Printed on {@code --help} and prefixed to every usage error. */
 	public static final String USAGE = """
 			Usage: atlassian-cli --url <url> [--space-key <key> --path <path> [--root <title>] [--no-delete-orphans] | --config <file.yaml>]
-			                     [--parser-class <fqcn>] [--plugin-dir <dir>] [--username <name>] [--credentials-file <file>]
+			                     [--parser-class <fqcn>] [--jira-url <url>] [--plugin-dir <dir>] [--username <name>] [--credentials-file <file>]
 			                     [--debug] [--verbose|-v] [--help|-h] [--version]
 
 			  --url <url>              Base URL of the Confluence instance. Required.
@@ -49,6 +49,7 @@ public final class ArgumentParser {
 			  --config <file.yaml>     Read one or more mappers from a YAML file. Cannot be combined
 			                           with --space-key/--path/--root/--delete-orphans.
 			  --parser-class <fqcn>    Fully qualified name of the Parser implementation to use.
+			  --jira-url <url>         Jira base URL: render issue keys as plain links instead of the Jira macro.
 			  --plugin-dir <dir>       Directory of additional jars to search for --parser-class.
 			  --username <name>       Confluence account name. Not required with an env-var token.
 			  --credentials-file <file> File with 'username'/'password' entries; must be chmod 600.
@@ -90,6 +91,7 @@ public final class ArgumentParser {
 				case "--path" -> options.setPath(nextValue(it, arg));
 				case "--root" -> options.setRoot(nextValue(it, arg));
 				case "--parser-class" -> options.setParserClass(nextValue(it, arg));
+				case "--jira-url" -> options.setJiraUrl(nextValue(it, arg));
 				case "--username" -> options.setUsername(nextValue(it, arg));
 				case "--config" -> options.setConfigFile(Path.of(nextValue(it, arg)));
 				case "--plugin-dir" -> options.setPluginDir(Path.of(nextValue(it, arg)));

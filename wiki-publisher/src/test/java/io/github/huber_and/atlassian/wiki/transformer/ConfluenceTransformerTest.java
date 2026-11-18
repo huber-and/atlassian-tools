@@ -17,6 +17,7 @@ package io.github.huber_and.atlassian.wiki.transformer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -355,6 +356,25 @@ class ConfluenceTransformerTest {
 		}
 		assertFalse(storage.contains("class=\"jira\""), () -> "span.jira leaked: " + storage);
 		assertFalse(storage.contains("ac:name=\"server"), () -> "Unexpected server parameter: " + storage);
+	}
+
+	@Test
+	void jiraKeyBecomesPlainLinkWhenJiraUrlIsSet() {
+		final var page = new Page("Page", Path.of("/tmp/page.html"), null);
+		final var linking = new ConfluenceTransformer(LinkResolver.empty(), "https://jira.example.com/");
+		final var html = "<p>Tracked in <span class=\"jira\">XCLOUD-1785</span>.</p>";
+
+		final var storage = linking.transform(page, Jsoup.parse(html).body()).getContent();
+
+		assertTrue(storage.contains("<a href=\"https://jira.example.com/browse/XCLOUD-1785\">XCLOUD-1785</a>"),
+				() -> storage);
+		assertFalse(storage.contains("ac:name=\"jira\""), () -> "No macro expected: " + storage);
+	}
+
+	@Test
+	void nonHttpJiraUrlIsRejected() {
+		assertThrows(IllegalArgumentException.class,
+				() -> new ConfluenceTransformer(LinkResolver.empty(), "javascript:alert(1)"));
 	}
 
 	@Test

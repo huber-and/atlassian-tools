@@ -159,7 +159,7 @@ public class Publisher {
 		final var resolver = LinkResolver
 				.of(parsed.entrySet().stream().map(e -> new MapperPages(e.getKey().getSpaceKey(),
 						Path.of(e.getKey().getPath()), e.getKey().getRoot(), e.getValue())).toList());
-		final var client = new ConfluenceClient(config, parser, new ConfluenceTransformer(resolver));
+		final var client = new ConfluenceClient(config, parser, new ConfluenceTransformer(resolver, config.getJiraUrl()));
 
 		for (final var entry : parsed.entrySet()) {
 			if (!publish(entry.getKey(), entry.getValue(), client)) {
