@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 
 import io.github.huber_and.atlassian.wiki.Configuration;
 import io.github.huber_and.atlassian.wiki.parser.AntoraParser;
+import io.github.huber_and.atlassian.wiki.transformer.JiraOptions;
 
 /**
  * Tests that {@link CliOptions}/{@link ConfigFile}/{@link Credentials} land
@@ -56,6 +57,25 @@ class ConfigurationBuilderTest {
 		assertEquals("build/site", mapper.getPath());
 		assertEquals("Architecture", mapper.getRoot());
 		assertFalse(mapper.isDeleteOrphans());
+	}
+
+	@Test
+	void jiraFlagsOverrideConfigFile() {
+		final var options = new CliOptions();
+		options.setUrl("https://confluence.example.com");
+		options.setSpaceKey("DOCS");
+		options.setPath("build/site");
+		options.setJiraRendering("link");
+		final var file = new ConfigFile();
+		file.setJiraUrl("https://jira.example.com");
+		file.setJiraRendering("none");
+		file.setJiraDetectLinks(true);
+
+		final var config = ConfigurationBuilder.build(options, file, new Credentials("jane", "token"));
+
+		assertEquals("https://jira.example.com", config.getJiraUrl());
+		assertEquals(JiraOptions.Rendering.LINK, config.getJiraRendering());
+		assertTrue(config.isJiraDetectLinks());
 	}
 
 	@Test

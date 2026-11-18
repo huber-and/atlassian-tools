@@ -80,8 +80,8 @@ public class ConfluenceTransformer implements Transformer {
 	/** Resolves hrefs to Confluence link targets. */
 	private final LinkResolver resolver;
 
-	/** Jira base URL without trailing slash; {@code null} emits the Jira macro instead of links. */
-	private final String jiraUrl;
+	/** Detection and rendering of Jira issue keys. */
+	private final JiraOptions jira;
 
 	/**
 	 * Creates a transformer that cannot resolve internal links.
@@ -99,27 +99,19 @@ public class ConfluenceTransformer implements Transformer {
 	 * @param resolver the link index built for this publish run
 	 */
 	public ConfluenceTransformer(final LinkResolver resolver) {
-		this(resolver, null);
+		this(resolver, JiraOptions.DEFAULT);
 	}
 
 	/**
-	 * Creates a transformer that resolves internal links and renders Jira issue keys
-	 * as plain links when a Jira URL is given.
+	 * Creates a transformer that resolves internal links and handles Jira issue keys
+	 * as configured.
 	 *
 	 * @param resolver the link index built for this publish run
-	 * @param jiraUrl  base URL of Jira, or blank to emit the Jira macro
-	 * @throws IllegalArgumentException if the Jira URL is not an http(s) URL
+	 * @param jira     detection and rendering of Jira issue keys
 	 */
-	public ConfluenceTransformer(final LinkResolver resolver, final String jiraUrl) {
+	public ConfluenceTransformer(final LinkResolver resolver, final JiraOptions jira) {
 		this.resolver = resolver;
-		if (StringUtils.isBlank(jiraUrl)) {
-			this.jiraUrl = null;
-		} else if (jiraUrl.startsWith("https://") || jiraUrl.startsWith("http://")) {
-			final var trimmed = jiraUrl.strip();
-			this.jiraUrl = trimmed.endsWith("/") ? trimmed.substring(0, trimmed.length() - 1) : trimmed;
-		} else {
-			throw new IllegalArgumentException("jiraUrl must be an http(s) URL: " + jiraUrl);
-		}
+		this.jira = jira;
 	}
 
 	/**
@@ -220,35 +212,52 @@ public class ConfluenceTransformer implements Transformer {
 	}
 
 	/**
-	 * Replaces every {@code span.jira} holding an issue key by the Confluence Jira
-	 * issue macro, so tickets show up with their status instead of as plain text.
+	 * Renders Jira issue keys as configured in {@link JiraOptions}.
 	 *
-	 * The macro is emitted with the key and {@code showSummary=false}, so only key
-	 * and status are shown. Without a {@code server} parameter Confluence uses the
-	 * default Jira site of the instance. With a configured Jira URL the key becomes a
-	 * plain link to the issue instead. A span whose text is
-	 * not exactly an issue key is left untouched.
+	 * A key is a {@code span.jira} whose text is exactly an issue key, and, with link
+	 * detection, an {@code <a href="<jiraUrl>/browse/KEY">} whose text is the key
+	 * itself. A link with its own text stays a link so the sentence keeps its wording;
+	 * a {@code span.jira} with other text is left unchanged with a warning.
+	 *
+	 * The macro carries the key and {@code showSummary=false}, so only key and status
+	 * are shown. Without a {@code server} parameter Confluence uses the default Jira
+	 * site of the instance.
 	 *
 	 * @param content the HTML content to scan
 	 */
 	private void transformJiraKeys(final Element content) {
+		if (jira.rendering() == JiraOptions.Rendering.NONE) {
+			return;
+		}
 		content.select("span.jira").forEach(span -> {
 			final var key = span.text().strip();
 			if (!JIRA_KEY_PATTERN.matcher(key).matches()) {
 				log.warn("Leaving span.jira unchanged, '{}' is not a Jira issue key", key);
 				return;
 			}
-			if (jiraUrl != null) {
-				span.replaceWith(new Element("a").attr("href", jiraUrl + "/browse/" + key).text(key));
-				return;
-			}
-			final var macro = new Element("ac:structured-macro", "ac");
-			macro.attr("ac:name", "jira");
-			macro.appendElement("ac:parameter", "ac").attr("ac:name", "key").appendText(key);
-			// Key and status only: the full summary of every ticket makes running text restless.
-			macro.appendElement("ac:parameter", "ac").attr("ac:name", "showSummary").appendText("false");
-			span.replaceWith(macro);
+			span.replaceWith(renderJiraKey(key));
 		});
+		if (jira.detectLinks()) {
+			final var hrefPattern = jira.issueHrefPattern();
+			content.select("a[href]").forEach(link -> {
+				final var matcher = hrefPattern.matcher(link.attr("href"));
+				if (matcher.matches() && matcher.group(1).equals(link.text().strip())) {
+					link.replaceWith(renderJiraKey(matcher.group(1)));
+				}
+			});
+		}
+	}
+
+	private Element renderJiraKey(final String key) {
+		if (jira.rendering() == JiraOptions.Rendering.LINK) {
+			return new Element("a").attr("href", jira.url() + "/browse/" + key).text(key);
+		}
+		final var macro = new Element("ac:structured-macro", "ac");
+		macro.attr("ac:name", "jira");
+		macro.appendElement("ac:parameter", "ac").attr("ac:name", "key").appendText(key);
+		// Key and status only: the full summary of every ticket makes running text restless.
+		macro.appendElement("ac:parameter", "ac").attr("ac:name", "showSummary").appendText("false");
+		return macro;
 	}
 
 	/**

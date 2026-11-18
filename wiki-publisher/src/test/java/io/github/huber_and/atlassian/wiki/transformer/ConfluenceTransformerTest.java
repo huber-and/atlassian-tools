@@ -358,23 +358,74 @@ class ConfluenceTransformerTest {
 		assertFalse(storage.contains("ac:name=\"server"), () -> "Unexpected server parameter: " + storage);
 	}
 
-	@Test
-	void jiraKeyBecomesPlainLinkWhenJiraUrlIsSet() {
+	private static final String JIRA = "https://jira.example.com";
+
+	private static String transformWith(final JiraOptions jira, final String html) {
 		final var page = new Page("Page", Path.of("/tmp/page.html"), null);
-		final var linking = new ConfluenceTransformer(LinkResolver.empty(), "https://jira.example.com/");
-		final var html = "<p>Tracked in <span class=\"jira\">XCLOUD-1785</span>.</p>";
+		return new ConfluenceTransformer(LinkResolver.empty(), jira).transform(page, Jsoup.parse(html).body())
+				.getContent();
+	}
 
-		final var storage = linking.transform(page, Jsoup.parse(html).body()).getContent();
+	@Test
+	void jiraKeyBecomesPlainLinkWithLinkRendering() {
+		final var storage = transformWith(new JiraOptions(JIRA + "/", JiraOptions.Rendering.LINK, false),
+				"<p>Tracked in <span class=\"jira\">XCLOUD-1785</span>.</p>");
 
-		assertTrue(storage.contains("<a href=\"https://jira.example.com/browse/XCLOUD-1785\">XCLOUD-1785</a>"),
-				() -> storage);
+		assertTrue(storage.contains("<a href=\"" + JIRA + "/browse/XCLOUD-1785\">XCLOUD-1785</a>"), () -> storage);
 		assertFalse(storage.contains("ac:name=\"jira\""), () -> "No macro expected: " + storage);
 	}
 
 	@Test
-	void nonHttpJiraUrlIsRejected() {
+	void noneRenderingLeavesKeysUnchanged() {
+		final var storage = transformWith(new JiraOptions(null, JiraOptions.Rendering.NONE, false),
+				"<p><span class=\"jira\">XCLOUD-1785</span></p>");
+
+		assertFalse(storage.contains("ac:name=\"jira\""), () -> storage);
+		assertTrue(storage.contains("XCLOUD-1785"), () -> storage);
+	}
+
+	@Test
+	void detectedJiraLinkWithKeyAsTextBecomesMacro() {
+		final var storage = transformWith(new JiraOptions(JIRA, JiraOptions.Rendering.MACRO, true),
+				"<p>See <a href=\"" + JIRA + "/browse/CORE-661?focusedCommentId=1\">CORE-661</a>.</p>")
+				.replaceAll(">\\s+<", "><");
+
+		assertTrue(storage.contains(JIRA_MACRO + "CORE-661</ac:parameter>"), () -> storage);
+		assertFalse(storage.contains("/browse/CORE-661"), () -> "Link should be replaced: " + storage);
+	}
+
+	@Test
+	void detectedJiraLinkWithOwnTextStaysALink() {
+		final var html = "<p>See <a href=\"" + JIRA + "/browse/CORE-661\">the migration ticket</a>.</p>";
+
+		final var storage = transformWith(new JiraOptions(JIRA, JiraOptions.Rendering.MACRO, true), html);
+
+		assertFalse(storage.contains("ac:name=\"jira\""), () -> storage);
+		assertTrue(storage.contains("the migration ticket"), () -> storage);
+	}
+
+	@Test
+	void jiraLinksAreLeftAloneWithoutDetection() {
+		final var storage = transformWith(new JiraOptions(JIRA, JiraOptions.Rendering.MACRO, false),
+				"<p><a href=\"" + JIRA + "/browse/CORE-661\">CORE-661</a></p>");
+
+		assertFalse(storage.contains("ac:name=\"jira\""), () -> storage);
+	}
+
+	@Test
+	void linkToOtherHostIsNotDetected() {
+		final var storage = transformWith(new JiraOptions(JIRA, JiraOptions.Rendering.MACRO, true),
+				"<p><a href=\"https://evil.example.com/browse/CORE-661\">CORE-661</a></p>");
+
+		assertFalse(storage.contains("ac:name=\"jira\""), () -> storage);
+	}
+
+	@Test
+	void invalidJiraOptionsAreRejected() {
 		assertThrows(IllegalArgumentException.class,
-				() -> new ConfluenceTransformer(LinkResolver.empty(), "javascript:alert(1)"));
+				() -> new JiraOptions("javascript:alert(1)", JiraOptions.Rendering.LINK, false));
+		assertThrows(IllegalArgumentException.class, () -> new JiraOptions(null, JiraOptions.Rendering.LINK, false));
+		assertThrows(IllegalArgumentException.class, () -> new JiraOptions(null, JiraOptions.Rendering.MACRO, true));
 	}
 
 	@Test

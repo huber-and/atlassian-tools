@@ -45,6 +45,19 @@ class ArgumentParserTest {
 	}
 
 	@Test
+	void parsesJiraOptionsAndRejectsUnknownRendering() throws ArgumentParseException {
+		final var options = ArgumentParser.parse(new String[] { "--url", "https://confluence.example.com",
+				"--space-key", "DOCS", "--path", "site", "--jira-url", "https://jira.example.com", "--jira-rendering",
+				"link", "--jira-detect-links" });
+
+		assertEquals("https://jira.example.com", options.getJiraUrl());
+		assertEquals("link", options.getJiraRendering());
+		assertEquals(Boolean.TRUE, options.getJiraDetectLinks());
+		assertThrows(ArgumentParseException.class, () -> ArgumentParser.parse(new String[] { "--url",
+				"https://confluence.example.com", "--space-key", "DOCS", "--path", "site", "--jira-rendering", "card" }));
+	}
+
+	@Test
 	void deleteOrphansDefaultsToUnset() throws ArgumentParseException {
 		final var options = ArgumentParser.parse(
 				new String[] { "--url", "https://confluence.example.com", "--space-key", "DOCS", "--path", "site" });

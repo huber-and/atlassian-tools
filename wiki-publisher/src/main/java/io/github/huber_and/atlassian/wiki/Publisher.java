@@ -28,6 +28,7 @@ import io.github.huber_and.atlassian.wiki.Configuration.Mapper;
 import io.github.huber_and.atlassian.wiki.parser.AntoraParser;
 import io.github.huber_and.atlassian.wiki.parser.Parser;
 import io.github.huber_and.atlassian.wiki.transformer.ConfluenceTransformer;
+import io.github.huber_and.atlassian.wiki.transformer.JiraOptions;
 import io.github.huber_and.atlassian.wiki.transformer.LinkResolver;
 import io.github.huber_and.atlassian.wiki.transformer.LinkResolver.MapperPages;
 import lombok.extern.slf4j.Slf4j;
@@ -159,7 +160,8 @@ public class Publisher {
 		final var resolver = LinkResolver
 				.of(parsed.entrySet().stream().map(e -> new MapperPages(e.getKey().getSpaceKey(),
 						Path.of(e.getKey().getPath()), e.getKey().getRoot(), e.getValue())).toList());
-		final var client = new ConfluenceClient(config, parser, new ConfluenceTransformer(resolver, config.getJiraUrl()));
+		final var client = new ConfluenceClient(config, parser, new ConfluenceTransformer(resolver,
+				new JiraOptions(config.getJiraUrl(), config.getJiraRendering(), config.isJiraDetectLinks())));
 
 		for (final var entry : parsed.entrySet()) {
 			if (!publish(entry.getKey(), entry.getValue(), client)) {

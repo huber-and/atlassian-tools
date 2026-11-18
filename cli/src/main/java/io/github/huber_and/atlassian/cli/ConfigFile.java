@@ -40,6 +40,12 @@ public class ConfigFile {
 	/** Overridden by {@code --jira-url} when both are given. */
 	private String jiraUrl;
 
+	/** {@code macro}, {@code link} or {@code none}; overridden by {@code --jira-rendering}. */
+	private String jiraRendering;
+
+	/** Overridden by {@code --jira-detect-links} when both are given. */
+	private Boolean jiraDetectLinks;
+
 	/** The mappers to publish; used as-is in multi-mapper mode. */
 	private List<Configuration.Mapper> mappers = new ArrayList<>();
 }

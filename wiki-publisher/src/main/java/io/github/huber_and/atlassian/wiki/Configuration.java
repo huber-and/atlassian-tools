@@ -20,6 +20,7 @@ import java.util.Set;
 
 import io.github.huber_and.atlassian.wiki.parser.AntoraParser;
 import io.github.huber_and.atlassian.wiki.parser.Parser;
+import io.github.huber_and.atlassian.wiki.transformer.JiraOptions;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -73,11 +74,16 @@ public class Configuration {
 	private String parserClass = AntoraParser.class.getName();
 
 	/**
-	 * Base URL of Jira, e.g. {@code https://example.atlassian.net}. When set, Jira
-	 * issue keys become plain links to {@code <jiraUrl>/browse/KEY} instead of the
-	 * Confluence Jira macro.
+	 * Base URL of Jira, e.g. {@code https://example.atlassian.net}. Required for
+	 * {@link JiraOptions.Rendering#LINK} and for {@link #jiraDetectLinks}.
 	 */
 	private String jiraUrl;
+
+	/** How Jira issue keys are rendered. Defaults to the Jira macro. */
+	private JiraOptions.Rendering jiraRendering = JiraOptions.Rendering.MACRO;
+
+	/** Also treat links to {@code <jiraUrl>/browse/KEY} with the key as text as issue keys. */
+	private boolean jiraDetectLinks;
 
 	/**
 	 * Mapper configuration that defines how local content maps to Confluence

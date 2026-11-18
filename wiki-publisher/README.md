@@ -16,7 +16,7 @@
 - **Pluggable Parser:** Replace the built-in parser with your own `Parser` implementation.
 - **Multi-Space Mapping:** Configure multiple mappings to publish different documentation sets to different Confluence spaces.
 - **Hierarchy Preservation:** Maintains the page hierarchy from your local documentation when publishing to Confluence.
-- **Content Transformation:** Automatically transforms local content into the Confluence Storage Format, including internal links, attachments, admonitions and Jira issue keys (`<span class="jira">KEY-1</span>` becomes the Jira issue macro showing key and status, or a plain link when `jiraUrl` is set).
+- **Content Transformation:** Automatically transforms local content into the Confluence Storage Format, including internal links, attachments, admonitions and Jira issue keys (`<span class="jira">KEY-1</span>`, and optionally links to Jira issues, become the Jira issue macro showing key and status, or a plain link).
 - **Orphan Cleanup:** Optionally moves pages that no longer exist locally to the Confluence trash.
 
 ## Installation
@@ -81,7 +81,9 @@ public class DocPublisher {
 | `debug` | `boolean` | If `true`, performs a dry-run without making changes to Confluence. |
 | `mappers` | `Set<Mapper>` | Set of mapping rules for publishing. |
 | `parserClass` | `String` | Fully qualified class name of the `Parser` implementation. Defaults to `AntoraParser`. |
-| `jiraUrl` | `String` | Jira base URL, e.g. `https://example.atlassian.net`. When set, Jira issue keys become plain links to `<jiraUrl>/browse/KEY` instead of the Jira macro. Optional. |
+| `jiraUrl` | `String` | Jira base URL, e.g. `https://example.atlassian.net`. Required for `jiraRendering=LINK` and `jiraDetectLinks`. |
+| `jiraRendering` | `JiraOptions.Rendering` | How Jira issue keys are rendered: `MACRO` (Jira macro with key and status, default), `LINK` (plain link to `<jiraUrl>/browse/KEY`) or `NONE` (unchanged). |
+| `jiraDetectLinks` | `boolean` | Also treat links to `<jiraUrl>/browse/KEY` whose text is the key itself as issue keys. Links with their own text stay links. Default `false`. |
 
 ### Mapper Options
 

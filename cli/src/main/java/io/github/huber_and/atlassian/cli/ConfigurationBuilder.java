@@ -16,11 +16,13 @@
 package io.github.huber_and.atlassian.cli;
 
 import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 
 import io.github.huber_and.atlassian.wiki.Configuration;
+import io.github.huber_and.atlassian.wiki.transformer.JiraOptions;
 
 /**
  * Combines {@link CliOptions}, an optional {@link ConfigFile} and resolved
@@ -55,6 +57,12 @@ public final class ConfigurationBuilder {
 			config.setParserClass(parserClass);
 		}
 		config.setJiraUrl(StringUtils.defaultIfBlank(options.getJiraUrl(), fileConfig.getJiraUrl()));
+		final var rendering = StringUtils.defaultIfBlank(options.getJiraRendering(), fileConfig.getJiraRendering());
+		if (StringUtils.isNotBlank(rendering)) {
+			config.setJiraRendering(JiraOptions.Rendering.valueOf(rendering.strip().toUpperCase(Locale.ROOT)));
+		}
+		config.setJiraDetectLinks(Boolean.TRUE.equals(
+				options.getJiraDetectLinks() != null ? options.getJiraDetectLinks() : fileConfig.getJiraDetectLinks()));
 		config.setDebug(options.isDebug());
 		config.setUsername(credentials.username());
 		config.setPassword(credentials.password());

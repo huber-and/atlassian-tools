@@ -18,6 +18,8 @@ package io.github.huber_and.atlassian.cli;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Locale;
+import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -37,7 +39,7 @@ public final class ArgumentParser {
 	/** Printed on {@code --help} and prefixed to every usage error. */
 	public static final String USAGE = """
 			Usage: atlassian-cli --url <url> [--space-key <key> --path <path> [--root <title>] [--no-delete-orphans] | --config <file.yaml>]
-			                     [--parser-class <fqcn>] [--jira-url <url>] [--plugin-dir <dir>] [--username <name>] [--credentials-file <file>]
+			                     [--parser-class <fqcn>] [--jira-url <url>] [--jira-rendering macro|link|none] [--jira-detect-links] [--plugin-dir <dir>] [--username <name>] [--credentials-file <file>]
 			                     [--debug] [--verbose|-v] [--help|-h] [--version]
 
 			  --url <url>              Base URL of the Confluence instance. Required.
@@ -49,7 +51,9 @@ public final class ArgumentParser {
 			  --config <file.yaml>     Read one or more mappers from a YAML file. Cannot be combined
 			                           with --space-key/--path/--root/--delete-orphans.
 			  --parser-class <fqcn>    Fully qualified name of the Parser implementation to use.
-			  --jira-url <url>         Jira base URL: render issue keys as plain links instead of the Jira macro.
+			  --jira-url <url>         Jira base URL. Needed for --jira-rendering link and --jira-detect-links.
+			  --jira-rendering <mode>  Jira issue keys as 'macro' (key and status, default), 'link' or 'none'.
+			  --jira-detect-links      Also treat links to <jira-url>/browse/KEY with the key as text as issue keys.
 			  --plugin-dir <dir>       Directory of additional jars to search for --parser-class.
 			  --username <name>       Confluence account name. Not required with an env-var token.
 			  --credentials-file <file> File with 'username'/'password' entries; must be chmod 600.
@@ -92,6 +96,8 @@ public final class ArgumentParser {
 				case "--root" -> options.setRoot(nextValue(it, arg));
 				case "--parser-class" -> options.setParserClass(nextValue(it, arg));
 				case "--jira-url" -> options.setJiraUrl(nextValue(it, arg));
+				case "--jira-rendering" -> options.setJiraRendering(jiraRendering(nextValue(it, arg)));
+				case "--jira-detect-links" -> options.setJiraDetectLinks(true);
 				case "--username" -> options.setUsername(nextValue(it, arg));
 				case "--config" -> options.setConfigFile(Path.of(nextValue(it, arg)));
 				case "--plugin-dir" -> options.setPluginDir(Path.of(nextValue(it, arg)));
@@ -103,6 +109,13 @@ public final class ArgumentParser {
 			validate(options);
 		}
 		return options;
+	}
+
+	private static String jiraRendering(final String value) throws ArgumentParseException {
+		if (!Set.of("macro", "link", "none").contains(value.toLowerCase(Locale.ROOT))) {
+			throw usageError("--jira-rendering must be macro, link or none, not: " + value);
+		}
+		return value;
 	}
 
 	private static String nextValue(final Iterator<String> it, final String flag) throws ArgumentParseException {

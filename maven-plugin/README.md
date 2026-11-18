@@ -75,7 +75,9 @@ The main goal of this plugin is `atlassian:publish`. It reads the configured loc
 | `serverId` | `String` | No | `serverId` | ID of the `<server>` entry in `settings.xml` to read credentials from. Defaults to the host part of `url`. |
 | `skip` | `boolean` | No | `atlassian.skip` | If `true`, the goal does nothing. Defaults to `false`. |
 | `parserClass` | `String` | No | `page.parser` | Fully qualified class name of the parser used to read the local content. Defaults to `io.github.huber_and.atlassian.wiki.parser.AntoraParser`. |
-| `jiraUrl` | `String` | No | `atlassian.jiraUrl` | Jira base URL, e.g. `https://example.atlassian.net`. When set, Jira issue keys (`span.jira`) become plain links to `<jiraUrl>/browse/KEY`; otherwise they become the Confluence Jira macro showing key and status. |
+| `jiraUrl` | `String` | No | `atlassian.jiraUrl` | Jira base URL, e.g. `https://example.atlassian.net`. Required for `jiraRendering=LINK` and `jiraDetectLinks`. |
+| `jiraRendering` | `String` | No | `atlassian.jiraRendering` | How Jira issue keys (`span.jira`) are rendered: `MACRO` (Jira macro with key and status, default), `LINK` (plain link to `<jiraUrl>/browse/KEY`) or `NONE` (unchanged). |
+| `jiraDetectLinks` | `boolean` | No | `atlassian.jiraDetectLinks` | Also treat links to `<jiraUrl>/browse/KEY` whose text is the key itself as issue keys. Links with their own text stay links. Default `false`. |
 
 ### Mapper Configuration
 

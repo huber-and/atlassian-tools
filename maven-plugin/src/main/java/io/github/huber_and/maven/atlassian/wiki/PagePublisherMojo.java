@@ -34,6 +34,7 @@ import org.apache.maven.settings.crypto.DefaultSettingsDecryptionRequest;
 import org.apache.maven.settings.crypto.SettingsDecrypter;
 
 import io.github.huber_and.atlassian.wiki.Configuration;
+import io.github.huber_and.atlassian.wiki.transformer.JiraOptions;
 import io.github.huber_and.atlassian.wiki.Publisher;
 
 /**
@@ -126,13 +127,26 @@ public class PagePublisherMojo extends AbstractMojo {
 	private String parserClass;
 
 	/**
-	 * Base URL of Jira, e.g. {@code https://example.atlassian.net}. When set, Jira
-	 * issue keys ({@code span.jira}) become plain links to
-	 * {@code <jiraUrl>/browse/KEY}; otherwise they become the Confluence Jira macro
-	 * showing key and status.
+	 * Base URL of Jira, e.g. {@code https://example.atlassian.net}. Required for
+	 * {@code jiraRendering=LINK} and for {@code jiraDetectLinks}.
 	 */
 	@Parameter(property = "atlassian.jiraUrl")
 	private String jiraUrl;
+
+	/**
+	 * How Jira issue keys ({@code span.jira}) are rendered: {@code MACRO} (the Jira
+	 * macro showing key and status), {@code LINK} (a plain link to
+	 * {@code <jiraUrl>/browse/KEY}) or {@code NONE} (unchanged).
+	 */
+	@Parameter(property = "atlassian.jiraRendering", defaultValue = "MACRO")
+	private JiraOptions.Rendering jiraRendering;
+
+	/**
+	 * Also treat links to {@code <jiraUrl>/browse/KEY} whose text is the key itself
+	 * as Jira issue keys.
+	 */
+	@Parameter(property = "atlassian.jiraDetectLinks", defaultValue = "false")
+	private boolean jiraDetectLinks;
 
 	/** Maven helper for decrypting passwords stored in {@code settings.xml}. */
 	private final SettingsDecrypter settingsDecrypter;
@@ -170,6 +184,8 @@ public class PagePublisherMojo extends AbstractMojo {
 		final var config = new Configuration();
 		config.setParserClass(parserClass);
 		config.setJiraUrl(jiraUrl);
+		config.setJiraRendering(jiraRendering);
+		config.setJiraDetectLinks(jiraDetectLinks);
 		config.setUrl(url);
 		config.setMappers(mappers);
 		if (StringUtils.isBlank(username)) {
